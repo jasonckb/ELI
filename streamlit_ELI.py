@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+import pandas as pd
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -9,6 +10,8 @@ st.set_page_config(layout="wide")
 def get_stock_data(ticker, period="1y"):
     stock = yf.Ticker(ticker)
     data = stock.history(period=period)
+    # Remove rows with NaN values (days without data)
+    data = data.dropna()
     return data
 
 def format_ticker(ticker):
@@ -47,7 +50,15 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False,
-        height=800  # Increase the height of the chart
+        height=700  # Increase the height of the chart
+    )
+
+    # Set x-axis to show only trading days
+    fig.update_xaxes(
+        rangebreaks=[
+            dict(bounds=["sat", "mon"]),  # Hide weekends
+            dict(values=["2023-12-25", "2024-01-01"])  # Example: hide specific holidays
+        ]
     )
 
     return fig
