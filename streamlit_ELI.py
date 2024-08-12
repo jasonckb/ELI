@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # Set page to wide mode
-st.set_page_config(layout="auto")
+st.set_page_config(layout="wide")
 
 def get_stock_data(ticker, period="1y"):
     stock = yf.Ticker(ticker)
