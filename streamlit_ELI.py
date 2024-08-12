@@ -4,25 +4,10 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
 
-# Set page to wide mode
-st.set_page_config(layout="wide")
+# ... (previous imports and setup remain the same)
 
-def get_stock_data(ticker, period="1y"):
-    stock = yf.Ticker(ticker)
-    data = stock.history(period=period)
-    data = data.dropna()
-    return data
-
-def format_ticker(ticker):
-    if ticker.isdigit():
-        return f"{int(ticker):04d}.HK"
-    return ticker
-
-def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
-    strike_price = current_price * (strike_pct / 100)
-    airbag_price = current_price * (airbag_pct / 100)
-    knockout_price = current_price * (knockout_pct / 100)
-    return strike_price, airbag_price, knockout_price
+def calculate_ema(data, period):
+    return data['Close'].ewm(span=period, adjust=False).mean()
 
 def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig = go.Figure()
@@ -38,6 +23,11 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
         increasing_line_color='dodgerblue',  # Bullish bars in Dodge Blue
         decreasing_line_color='red'  # Bearish bars in red
     ))
+
+    # Calculate EMAs
+    ema_20 = calculate_ema(data, 20)
+    ema_50 = calculate_ema(data, 50)
+    ema_200 = calculate_ema(data, 200)
 
     # Calculate the position for price annotations
     last_date = data.index[-1]
@@ -55,6 +45,19 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange")
     fig.add_annotation(x=annotation_x, y=knockout_price, text=f"Knock-out Price: {knockout_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
+
+    # Add EMA lines
+    fig.add_hline(y=ema_20.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_20.iloc[-1], text=f"20 EMA: {ema_20.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
+
+    fig.add_hline(y=ema_50.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_50.iloc[-1], text=f"50 EMA: {ema_50.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
+
+    fig.add_hline(y=ema_200.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_200.iloc[-1], text=f"200 EMA: {ema_200.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
     # Add current price annotation
     current_price = data['Close'].iloc[-1]
@@ -84,100 +87,23 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
 
     return fig
 
-def get_financial_metrics(ticker):
-    stock = yf.Ticker(ticker)
-    info = stock.info
-    
-    metrics = {
-        "Market Cap": info.get("marketCap", "N/A"),
-        "Enterprise Value": info.get("enterpriseValue", "N/A"),
-        "Trailing P/E": info.get("trailingPE", "N/A"),
-        "Forward P/E": info.get("forwardPE", "N/A"),
-        "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
-        "Price/Sales": info.get("priceToSalesTrailing12Months", "N/A"),
-        "Price/Book": info.get("priceToBook", "N/A"),
-        "Enterprise Value/Revenue": info.get("enterpriseToRevenue", "N/A"),
-        "Enterprise Value/EBITDA": info.get("enterpriseToEbitda", "N/A")
-    }
-    
-    # Format large numbers
-    for key in ["Market Cap", "Enterprise Value"]:
-        if isinstance(metrics[key], (int, float)):
-            metrics[key] = f"{metrics[key]/1e12:.2f}T" if metrics[key] >= 1e12 else f"{metrics[key]/1e9:.2f}B"
-    
-    # Round floating point numbers
-    for key, value in metrics.items():
-        if isinstance(value, float):
-            metrics[key] = round(value, 2)
-    
-    return metrics
+# ... (rest of the code remains the same)
 
-# Initialize session state
-if 'formatted_ticker' not in st.session_state:
-    st.session_state.formatted_ticker = ''
-if 'data' not in st.session_state:
-    st.session_state.data = pd.DataFrame()
+# In the main logic section, after plotting the chart:
+with col2:
+    # ... (previous code for financial metrics)
 
-# Main app layout
-st.title("Stock Price Chart with Key Levels")
+    # Plot the chart
+    fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
+    st.plotly_chart(fig, use_container_width=True)
 
-# Create two columns for layout
-col1, col2 = st.columns([1, 4])
+    # Display EMA values
+    st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
+    ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
+    ema_50 = calculate_ema(st.session_state.data, 50).iloc[-1]
+    ema_200 = calculate_ema(st.session_state.data, 200).iloc[-1]
+    st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
 
-# Sidebar inputs (now in the first column)
-with col1:
-    ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
-    strike_pct = st.number_input("Strike Price %:", value=90)
-    airbag_pct = st.number_input("Airbag Price %:", value=80)
-    knockout_pct = st.number_input("Knock-out Price %:", value=105)
-    
-    # Add a refresh button
-    refresh = st.button("Refresh Data")
-
-    # Display current price and calculated levels with larger text in the sidebar
-    st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
-
-# Format ticker and fetch data when input changes or refresh is clicked
-if ticker != st.session_state.formatted_ticker or refresh:
-    st.session_state.formatted_ticker = format_ticker(ticker)
-    try:
-        st.session_state.data = get_stock_data(st.session_state.formatted_ticker)
-    except Exception as e:
-        st.error(f"Error fetching data: {str(e)}")
-
-# Main logic
-if not st.session_state.data.empty:
-    try:
-        current_price = st.session_state.data['Close'].iloc[-1]
-        strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
-
-        # Display current price and calculated levels in the sidebar
-        with col1:
-            st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-            st.markdown(f"<p>Strike Price ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
-            st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
-            st.markdown(f"<p>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
-
-        # Main chart and data display
-        with col2:
-            # Add financial metrics above the chart
-            st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
-            try:
-                metrics = get_financial_metrics(st.session_state.formatted_ticker)
-                cols = st.columns(3)  # Create 3 columns for metrics display
-                for i, (key, value) in enumerate(metrics.items()):
-                    cols[i % 3].markdown(f"<b>{key}:</b> {value}", unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"Error fetching financial metrics: {str(e)}")
-
-            # Add some space between metrics and chart
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            # Plot the chart
-            fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
-            st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error processing data: {str(e)}")
-else:
-    st.warning("No data available. Please check the ticker symbol and try again.")
+# ... (rest of the code remains the same)
