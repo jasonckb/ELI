@@ -75,35 +75,42 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     ema_200 = calculate_ema(data, 200)
 
     # Calculate the position for price annotations
+    first_date = data.index[0]
     last_date = data.index[-1]
     annotation_x = last_date + pd.Timedelta(days=2)  # 2 days after the last candle
 
     # Add price level lines with annotations on the right (only if not zero)
     if strike_price != 0:
-        fig.add_hline(y=strike_price, line_dash="dash", line_color="blue")
+        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=strike_price, y1=strike_price,
+                      line=dict(color="blue", width=2, dash="dash"))
         fig.add_annotation(x=annotation_x, y=strike_price, text=f"Strike Price: {strike_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
 
     if airbag_price != 0:
-        fig.add_hline(y=airbag_price, line_dash="dash", line_color="green")
+        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=airbag_price, y1=airbag_price,
+                      line=dict(color="green", width=2, dash="dash"))
         fig.add_annotation(x=annotation_x, y=airbag_price, text=f"Airbag Price: {airbag_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="green"))
 
     if knockout_price != 0:
-        fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange")
+        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=knockout_price, y1=knockout_price,
+                      line=dict(color="orange", width=2, dash="dash"))
         fig.add_annotation(x=annotation_x, y=knockout_price, text=f"Knock-out Price: {knockout_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
 
     # Add EMA lines
-    fig.add_hline(y=ema_20.iloc[-1], line_dash="dash", line_color="gray", line_width=1)
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_20.iloc[-1], y1=ema_20.iloc[-1],
+                  line=dict(color="gray", width=1, dash="dash"))
     fig.add_annotation(x=annotation_x, y=ema_20.iloc[-1], text=f"20 EMA: {ema_20.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
-    fig.add_hline(y=ema_50.iloc[-1], line_dash="dash", line_color="gray", line_width=2)
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_50.iloc[-1], y1=ema_50.iloc[-1],
+                  line=dict(color="gray", width=2, dash="dash"))
     fig.add_annotation(x=annotation_x, y=ema_50.iloc[-1], text=f"50 EMA: {ema_50.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
-    fig.add_hline(y=ema_200.iloc[-1], line_dash="dash", line_color="gray", line_width=3)
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_200.iloc[-1], y1=ema_200.iloc[-1],
+                  line=dict(color="gray", width=3, dash="dash"))
     fig.add_annotation(x=annotation_x, y=ema_200.iloc[-1], text=f"200 EMA: {ema_200.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
@@ -126,17 +133,20 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     ))
 
     # Add POC line (red)
-    fig.add_hline(y=poc_price, line_color="red", line_width=2)
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=poc_price, y1=poc_price,
+                  line=dict(color="red", width=2))
     fig.add_annotation(x=annotation_x, y=poc_price, text=f"POC: {poc_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="red"))
 
     # Add Value Area lines (yellow)
-    fig.add_hline(y=value_area_low, line_color="yellow", line_width=2)
-    fig.add_annotation(x=annotation_x, y=value_area_low, text=f"VAL: {value_area_low:.2f}",
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_low, y1=value_area_low,
+                  line=dict(color="yellow", width=2))
+    fig.add_annotation(x=annotation_x, y=value_area_low, text=f"Value at Low: {value_area_low:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="yellow"))
 
-    fig.add_hline(y=value_area_high, line_color="yellow", line_width=2)
-    fig.add_annotation(x=annotation_x, y=value_area_high, text=f"VAH: {value_area_high:.2f}",
+    fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_high, y1=value_area_high,
+                  line=dict(color="yellow", width=2))
+    fig.add_annotation(x=annotation_x, y=value_area_high, text=f"Value at High: {value_area_high:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="yellow"))
 
     fig.update_layout(
@@ -164,7 +174,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
             dict(bounds=["sat", "mon"]),  # Hide weekends
             dict(values=["2023-12-25", "2024-01-01"])  # Example: hide specific holidays
         ],
-        range=[data.index[0], annotation_x]  # Extend x-axis range for annotations
+        range=[first_date, annotation_x]  # Extend x-axis range for annotations
     )
 
     return fig
