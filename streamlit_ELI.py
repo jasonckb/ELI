@@ -78,6 +78,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     first_date = data.index[0]
     last_date = data.index[-1]
     annotation_x = last_date + pd.Timedelta(days=2)  # 2 days after the last candle
+    mid_date = first_date + (last_date - first_date) / 2  # Middle of the date range
 
     # Add price level lines with annotations on the right (only if not zero)
     if strike_price != 0:
@@ -138,16 +139,16 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig.add_annotation(x=annotation_x, y=poc_price, text=f"POC: {poc_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="red"))
 
-    # Add Value Area lines (yellow)
+    # Add Value Area lines (purple) with labels in the middle
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_low, y1=value_area_low,
                   line=dict(color="purple", width=2))
-    fig.add_annotation(x=annotation_x, y=value_area_low, text=f"Value at Low: {value_area_low:.2f}",
-                       showarrow=False, xanchor="right", font=dict(size=12, color="yellow"))
+    fig.add_annotation(x=mid_date, y=value_area_low, text=f"Value at Low: {value_area_low:.2f}",
+                       showarrow=False, xanchor="center", font=dict(size=12, color="purple"))
 
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_high, y1=value_area_high,
                   line=dict(color="purple", width=2))
-    fig.add_annotation(x=annotation_x, y=value_area_high, text=f"Value at High: {value_area_high:.2f}",
-                       showarrow=False, xanchor="right", font=dict(size=12, color="yellow"))
+    fig.add_annotation(x=mid_date, y=value_area_high, text=f"Value at High: {value_area_high:.2f}",
+                       showarrow=False, xanchor="center", font=dict(size=12, color="purple"))
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
