@@ -67,10 +67,11 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False,
-        height=500,  # Reduce the height of the chart
+        height=600,  # Adjusted height
         width=800,   # Set a fixed width for the chart
         margin=dict(l=50, r=150, t=50, b=50),  # Increase right margin for annotations
-        showlegend=False
+        showlegend=False,
+        font=dict(size=14)  # Increase the overall font size
     )
 
     # Set x-axis to show only trading days and extend range for annotations
@@ -87,7 +88,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
 st.title("Stock Price Chart with Key Levels")
 
 # Create two columns for layout
-col1, col2 = st.columns([1, 4])  # Adjust the ratio to give more space to the chart
+col1, col2 = st.columns([1, 3])
 
 # Sidebar inputs (now in the first column)
 with col1:
@@ -118,5 +119,11 @@ if not data.empty:
         fig = plot_stock_chart(data, formatted_ticker, strike_price, airbag_price, knockout_price)
         st.plotly_chart(fig, use_container_width=True)
 
+    # Display current price and calculated levels with larger text in the sidebar
+    with col1:
+        st.markdown(f"<h2>Current Price: {current_price:.2f}</h2>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Strike Price ({strike_pct}%): {strike_price:.2f}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</h3>", unsafe_allow_html=True)
 else:
     st.error("Unable to fetch stock data. Please check the ticker symbol and try again.")
