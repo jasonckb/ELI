@@ -139,16 +139,18 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig.add_annotation(x=annotation_x, y=poc_price, text=f"POC: {poc_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="red"))
 
-    # Add Value Area lines (purple) with labels in the middle
+    # Add Value Area lines (purple) with labels above and below the lines
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_low, y1=value_area_low,
                   line=dict(color="purple", width=2))
     fig.add_annotation(x=mid_date, y=value_area_low, text=f"Value at Low: {value_area_low:.2f}",
-                       showarrow=False, xanchor="center", font=dict(size=12, color="purple"))
+                       showarrow=False, xanchor="center", yanchor="top", font=dict(size=12, color="purple"),
+                       yshift=-5)  # Shift the label 5 pixels below the line
 
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_high, y1=value_area_high,
                   line=dict(color="purple", width=2))
     fig.add_annotation(x=mid_date, y=value_area_high, text=f"Value at High: {value_area_high:.2f}",
-                       showarrow=False, xanchor="center", font=dict(size=12, color="purple"))
+                       showarrow=False, xanchor="center", yanchor="bottom", font=dict(size=12, color="purple"),
+                       yshift=5)  # Shift the label 5 pixels above the line
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
