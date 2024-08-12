@@ -28,7 +28,7 @@ def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
 def calculate_ema(data, period):
     return data['Close'].ewm(span=period, adjust=False).mean()
 
-def calculate_volume_profile(data, bins=100):
+def calculate_volume_profile(data, bins=30):
     price_range = data['Close'].max() - data['Close'].min()
     bin_size = price_range / bins
     price_bins = pd.cut(data['Close'], bins=bins)
