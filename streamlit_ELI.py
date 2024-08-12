@@ -161,7 +161,7 @@ if not st.session_state.data.empty:
         # Main chart and data display
         with col2:
             # Add financial metrics above the chart
-            st.markdown("<h3>Financial Metrics:</h3>", unsafe_allow_html=True)
+            st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
             try:
                 metrics = get_financial_metrics(st.session_state.formatted_ticker)
                 cols = st.columns(3)  # Create 3 columns for metrics display
