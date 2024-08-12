@@ -28,7 +28,7 @@ def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
 def calculate_ema(data, period):
     return data['Close'].ewm(span=period, adjust=False).mean()
 
-def calculate_volume_profile(data, bins=50):
+def calculate_volume_profile(data, bins=40):
     price_range = data['Close'].max() - data['Close'].min()
     bin_size = price_range / bins
     price_bins = pd.cut(data['Close'], bins=bins)
@@ -74,15 +74,15 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
                        showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
 
     # Add EMA lines
-    fig.add_hline(y=ema_20.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_hline(y=ema_20.iloc[-1], line_dash="dash", line_color="gray", line_width=1)
     fig.add_annotation(x=annotation_x, y=ema_20.iloc[-1], text=f"20 EMA: {ema_20.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
-    fig.add_hline(y=ema_50.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_hline(y=ema_50.iloc[-1], line_dash="dash", line_color="gray", line_width=2)
     fig.add_annotation(x=annotation_x, y=ema_50.iloc[-1], text=f"50 EMA: {ema_50.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
-    fig.add_hline(y=ema_200.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_hline(y=ema_200.iloc[-1], line_dash="dash", line_color="gray", line_width=3)
     fig.add_annotation(x=annotation_x, y=ema_200.iloc[-1], text=f"200 EMA: {ema_200.iloc[-1]:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
 
