@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # Set page to wide mode
-st.set_page_config(layout="wide")
+st.set_page_config(layout="centered")
 
 def get_stock_data(ticker, period="1y"):
     stock = yf.Ticker(ticker)
@@ -40,14 +40,14 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     # Add price level lines
     fig.add_hline(y=strike_price, line_dash="dash", line_color="blue", annotation_text=f"Strike Price: {strike_price:.2f}")
     fig.add_hline(y=airbag_price, line_dash="dash", line_color="green", annotation_text=f"Airbag Price: {airbag_price:.2f}")
-    fig.add_hline(y=knockout_price, line_dash="dash", line_color="red", annotation_text=f"Knock-out Price: {knockout_price:.2f}")
+    fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange", annotation_text=f"Knock-out Price: {knockout_price:.2f}")
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False,
-        height=600  # Increase the height of the chart
+        height=800  # Increase the height of the chart
     )
 
     return fig
