@@ -40,32 +40,46 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
         decreasing_line_color='red'  # Bearish bars in red
     ))
 
-    # Add price level lines with larger text
-    fig.add_hline(y=strike_price, line_dash="dash", line_color="blue", 
-                  annotation_text=f"Strike Price: {strike_price:.2f}",
-                  annotation_font_size=24)
-    fig.add_hline(y=airbag_price, line_dash="dash", line_color="green", 
-                  annotation_text=f"Airbag Price: {airbag_price:.2f}",
-                  annotation_font_size=24)
-    fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange", 
-                  annotation_text=f"Knock-out Price: {knockout_price:.2f}",
-                  annotation_font_size=24)
+    # Calculate the position for price annotations
+    last_date = data.index[-1]
+    annotation_x = last_date + pd.Timedelta(days=2)  # 2 days after the last candle
+
+    # Add price level lines with annotations on the right
+    fig.add_hline(y=strike_price, line_dash="dash", line_color="blue")
+    fig.add_annotation(x=annotation_x, y=strike_price, text=f"Strike Price: {strike_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
+
+    fig.add_hline(y=airbag_price, line_dash="dash", line_color="green")
+    fig.add_annotation(x=annotation_x, y=airbag_price, text=f"Airbag Price: {airbag_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="green"))
+
+    fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange")
+    fig.add_annotation(x=annotation_x, y=knockout_price, text=f"Knock-out Price: {knockout_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
+
+    # Add current price annotation
+    current_price = data['Close'].iloc[-1]
+    fig.add_annotation(x=annotation_x, y=current_price, text=f"Current Price: {current_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="black"))
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False,
-        height=700,  # Increase the height of the chart
-        font=dict(size=18)  # Increase the overall font size
+        height=500,  # Reduce the height of the chart
+        width=800,   # Set a fixed width for the chart
+        margin=dict(l=50, r=150, t=50, b=50),  # Increase right margin for annotations
+        showlegend=False
     )
 
-    # Set x-axis to show only trading days
+    # Set x-axis to show only trading days and extend range for annotations
     fig.update_xaxes(
         rangebreaks=[
             dict(bounds=["sat", "mon"]),  # Hide weekends
             dict(values=["2023-12-25", "2024-01-01"])  # Example: hide specific holidays
-        ]
+        ],
+        range=[data.index[0], annotation_x]  # Extend x-axis range for annotations
     )
 
     return fig
@@ -73,7 +87,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
 st.title("Stock Price Chart with Key Levels")
 
 # Create two columns for layout
-col1, col2 = st.columns([1, 3])
+col1, col2 = st.columns([1, 4])  # Adjust the ratio to give more space to the chart
 
 # Sidebar inputs (now in the first column)
 with col1:
@@ -104,11 +118,5 @@ if not data.empty:
         fig = plot_stock_chart(data, formatted_ticker, strike_price, airbag_price, knockout_price)
         st.plotly_chart(fig, use_container_width=True)
 
-    # Display current price and calculated levels with larger text
-    with col1:
-        st.markdown(f"<h2>Current Price: {current_price:.2f}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<h3>Strike Price ({strike_pct}%): {strike_price:.2f}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<h3>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</h3>", unsafe_allow_html=True)
-        st.markdown(f"<h3>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</h3>", unsafe_allow_html=True)
 else:
     st.error("Unable to fetch stock data. Please check the ticker symbol and try again.")
