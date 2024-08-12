@@ -14,9 +14,9 @@ def format_ticker(ticker):
     return ticker
 
 def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
-    strike_price = current_price * (1 + strike_pct / 100)
-    airbag_price = current_price * (1 + airbag_pct / 100)
-    knockout_price = current_price * (1 + knockout_pct / 100)
+    strike_price = current_price * (strike_pct / 100)
+    airbag_price = current_price * (airbag_pct / 100)
+    knockout_price = current_price * (knockout_pct / 100)
     return strike_price, airbag_price, knockout_price
 
 def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
@@ -50,9 +50,9 @@ st.title("Stock Price Chart with Key Levels")
 
 # Sidebar inputs
 ticker = st.sidebar.text_input("Enter Stock Ticker:", value="AAPL")
-strike_pct = st.sidebar.number_input("Strike Price %:", value=5.0)
-airbag_pct = st.sidebar.number_input("Airbag Price %:", value=-15.0)
-knockout_pct = st.sidebar.number_input("Knock-out Price %:", value=-20.0)
+strike_pct = st.sidebar.number_input("Strike Price %:", value=90)
+airbag_pct = st.sidebar.number_input("Airbag Price %:", value=80)
+knockout_pct = st.sidebar.number_input("Knock-out Price %:", value=105)
 
 # Format ticker if it's a HK stock
 formatted_ticker = format_ticker(ticker)
