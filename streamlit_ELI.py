@@ -3,6 +3,7 @@ import yfinance as yf
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
+import numpy as np
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -26,6 +27,11 @@ def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
 
 def calculate_ema(data, period):
     return data['Close'].ewm(span=period, adjust=False).mean()
+
+def calculate_volume_profile(data, bins=100):
+    price_bins = pd.cut(data['Close'], bins=bins)
+    volume_profile = data.groupby(price_bins)['Volume'].sum()
+    return volume_profile
 
 def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig = go.Figure()
@@ -82,6 +88,19 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig.add_annotation(x=annotation_x, y=current_price, text=f"Current Price: {current_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=14, color="black"))
 
+    # Calculate and add volume profile
+    volume_profile = calculate_volume_profile(data)
+    max_volume = volume_profile.max()
+    fig.add_trace(go.Bar(
+        x=volume_profile.values,
+        y=volume_profile.index.mid,
+        orientation='h',
+        name='Volume Profile',
+        marker_color='rgba(200, 200, 200, 0.5)',
+        width=(volume_profile.index.right - volume_profile.index.left),
+        xaxis='x2'
+    ))
+
     fig.update_layout(
         title=f"{ticker} Stock Price",
         xaxis_title="Date",
@@ -91,7 +110,14 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
         width=800,
         margin=dict(l=50, r=150, t=50, b=50),
         showlegend=False,
-        font=dict(size=14)
+        font=dict(size=14),
+        xaxis2=dict(
+            side='top',
+            overlaying='x',
+            range=[0, max_volume],
+            showgrid=False,
+            showticklabels=False,
+        ),
     )
 
     # Set x-axis to show only trading days and extend range for annotations
