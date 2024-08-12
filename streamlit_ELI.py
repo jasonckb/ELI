@@ -33,9 +33,9 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     ))
 
     # Add price level lines
-    fig.add_hline(y=strike_price, line_dash="dash", line_color="blue", annotation_text="Strike Price")
-    fig.add_hline(y=airbag_price, line_dash="dash", line_color="green", annotation_text="Airbag Price")
-    fig.add_hline(y=knockout_price, line_dash="dash", line_color="red", annotation_text="Knock-out Price")
+    fig.add_hline(y=strike_price, line_dash="dash", line_color="blue", annotation_text=f"Strike Price: {strike_price:.2f}")
+    fig.add_hline(y=airbag_price, line_dash="dash", line_color="green", annotation_text=f"Airbag Price: {airbag_price:.2f}")
+    fig.add_hline(y=knockout_price, line_dash="dash", line_color="red", annotation_text=f"Knock-out Price: {knockout_price:.2f}")
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
@@ -70,8 +70,8 @@ if not data.empty:
 
     # Display current price and calculated levels
     st.write(f"Current Price: {current_price:.2f}")
-    st.write(f"Strike Price: {strike_price:.2f}")
-    st.write(f"Airbag Price: {airbag_price:.2f}")
-    st.write(f"Knock-out Price: {knockout_price:.2f}")
+    st.write(f"Strike Price ({strike_pct}%): {strike_price:.2f}")
+    st.write(f"Airbag Price ({airbag_pct}%): {airbag_price:.2f}")
+    st.write(f"Knock-out Price ({knockout_pct}%): {knockout_price:.2f}")
 else:
     st.error("Unable to fetch stock data. Please check the ticker symbol and try again.")
