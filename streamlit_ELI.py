@@ -7,7 +7,131 @@ import pandas as pd
 # Set page to wide mode
 st.set_page_config(layout="wide")
 
-# ... (keep all your previous function definitions here: get_stock_data, format_ticker, calculate_price_levels, plot_stock_chart, get_financial_metrics, calculate_ema)
+def get_stock_data(ticker, period="1y"):
+    stock = yf.Ticker(ticker)
+    data = stock.history(period=period)
+    data = data.dropna()
+    return data
+
+def format_ticker(ticker):
+    if ticker.isdigit():
+        return f"{int(ticker):04d}.HK"
+    return ticker
+
+def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
+    strike_price = current_price * (strike_pct / 100)
+    airbag_price = current_price * (airbag_pct / 100)
+    knockout_price = current_price * (knockout_pct / 100)
+    return strike_price, airbag_price, knockout_price
+
+def calculate_ema(data, period):
+    return data['Close'].ewm(span=period, adjust=False).mean()
+
+def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
+    fig = go.Figure()
+
+    # Candlestick chart with custom colors
+    fig.add_trace(go.Candlestick(
+        x=data.index,
+        open=data['Open'],
+        high=data['High'],
+        low=data['Low'],
+        close=data['Close'],
+        name='Price',
+        increasing_line_color='dodgerblue',  # Bullish bars in Dodge Blue
+        decreasing_line_color='red'  # Bearish bars in red
+    ))
+
+    # Calculate EMAs
+    ema_20 = calculate_ema(data, 20)
+    ema_50 = calculate_ema(data, 50)
+    ema_200 = calculate_ema(data, 200)
+
+    # Calculate the position for price annotations
+    last_date = data.index[-1]
+    annotation_x = last_date + pd.Timedelta(days=2)  # 2 days after the last candle
+
+    # Add price level lines with annotations on the right
+    fig.add_hline(y=strike_price, line_dash="dash", line_color="blue")
+    fig.add_annotation(x=annotation_x, y=strike_price, text=f"Strike Price: {strike_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
+
+    fig.add_hline(y=airbag_price, line_dash="dash", line_color="green")
+    fig.add_annotation(x=annotation_x, y=airbag_price, text=f"Airbag Price: {airbag_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="green"))
+
+    fig.add_hline(y=knockout_price, line_dash="dash", line_color="orange")
+    fig.add_annotation(x=annotation_x, y=knockout_price, text=f"Knock-out Price: {knockout_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
+
+    # Add EMA lines
+    fig.add_hline(y=ema_20.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_20.iloc[-1], text=f"20 EMA: {ema_20.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
+
+    fig.add_hline(y=ema_50.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_50.iloc[-1], text=f"50 EMA: {ema_50.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
+
+    fig.add_hline(y=ema_200.iloc[-1], line_dash="solid", line_color="gray", line_width=1)
+    fig.add_annotation(x=annotation_x, y=ema_200.iloc[-1], text=f"200 EMA: {ema_200.iloc[-1]:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=12, color="gray"))
+
+    # Add current price annotation
+    current_price = data['Close'].iloc[-1]
+    fig.add_annotation(x=annotation_x, y=current_price, text=f"Current Price: {current_price:.2f}",
+                       showarrow=False, xanchor="left", font=dict(size=14, color="black"))
+
+    fig.update_layout(
+        title=f"{ticker} Stock Price",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=False,
+        height=600,
+        width=800,
+        margin=dict(l=50, r=150, t=50, b=50),
+        showlegend=False,
+        font=dict(size=14)
+    )
+
+    # Set x-axis to show only trading days and extend range for annotations
+    fig.update_xaxes(
+        rangebreaks=[
+            dict(bounds=["sat", "mon"]),  # Hide weekends
+            dict(values=["2023-12-25", "2024-01-01"])  # Example: hide specific holidays
+        ],
+        range=[data.index[0], annotation_x]  # Extend x-axis range for annotations
+    )
+
+    return fig
+
+def get_financial_metrics(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    
+    metrics = {
+        "Market Cap": info.get("marketCap", "N/A"),
+        "Enterprise Value": info.get("enterpriseValue", "N/A"),
+        "Trailing P/E": info.get("trailingPE", "N/A"),
+        "Forward P/E": info.get("forwardPE", "N/A"),
+        "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
+        "Price/Sales": info.get("priceToSalesTrailing12Months", "N/A"),
+        "Price/Book": info.get("priceToBook", "N/A"),
+        "Enterprise Value/Revenue": info.get("enterpriseToRevenue", "N/A"),
+        "Enterprise Value/EBITDA": info.get("enterpriseToEbitda", "N/A")
+    }
+    
+    # Format large numbers
+    for key in ["Market Cap", "Enterprise Value"]:
+        if isinstance(metrics[key], (int, float)):
+            metrics[key] = f"{metrics[key]/1e12:.2f}T" if metrics[key] >= 1e12 else f"{metrics[key]/1e9:.2f}B"
+    
+    # Round floating point numbers
+    for key, value in metrics.items():
+        if isinstance(value, float):
+            metrics[key] = round(value, 2)
+    
+    return metrics
 
 def main():
     st.title("Stock Price Chart with Key Levels")
