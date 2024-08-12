@@ -134,20 +134,20 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
 
     # Add POC line (red)
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=poc_price, y1=poc_price,
-                  line=dict(color="red", width=2))
+                  line=dict(color="red", width=4))
     fig.add_annotation(x=annotation_x, y=poc_price, text=f"POC: {poc_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=12, color="red"))
 
     # Add Value Area lines (yellow)
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_low, y1=value_area_low,
-                  line=dict(color="yellow", width=2))
+                  line=dict(color="purple", width=2))
     fig.add_annotation(x=annotation_x, y=value_area_low, text=f"Value at Low: {value_area_low:.2f}",
-                       showarrow=False, xanchor="left", font=dict(size=12, color="yellow"))
+                       showarrow=False, xanchor="right", font=dict(size=12, color="yellow"))
 
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=value_area_high, y1=value_area_high,
-                  line=dict(color="yellow", width=2))
+                  line=dict(color="purple", width=2))
     fig.add_annotation(x=annotation_x, y=value_area_high, text=f"Value at High: {value_area_high:.2f}",
-                       showarrow=False, xanchor="left", font=dict(size=12, color="yellow"))
+                       showarrow=False, xanchor="right", font=dict(size=12, color="yellow"))
 
     fig.update_layout(
         title=f"{ticker} Stock Price",
