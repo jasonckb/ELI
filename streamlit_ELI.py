@@ -169,7 +169,33 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
 
     return fig
 
-# ... (rest of the code remains the same)
+def get_financial_metrics(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    
+    metrics = {
+        "Market Cap": info.get("marketCap", "N/A"),
+        "Enterprise Value": info.get("enterpriseValue", "N/A"),
+        "Trailing P/E": info.get("trailingPE", "N/A"),
+        "Forward P/E": info.get("forwardPE", "N/A"),
+        "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
+        "Price/Sales": info.get("priceToSalesTrailing12Months", "N/A"),
+        "Price/Book": info.get("priceToBook", "N/A"),
+        "Enterprise Value/Revenue": info.get("enterpriseToRevenue", "N/A"),
+        "Enterprise Value/EBITDA": info.get("enterpriseToEbitda", "N/A")
+    }
+    
+    # Format large numbers
+    for key in ["Market Cap", "Enterprise Value"]:
+        if isinstance(metrics[key], (int, float)):
+            metrics[key] = f"{metrics[key]/1e12:.2f}T" if metrics[key] >= 1e12 else f"{metrics[key]/1e9:.2f}B"
+    
+    # Round floating point numbers
+    for key, value in metrics.items():
+        if isinstance(value, float):
+            metrics[key] = round(value, 2)
+    
+    return metrics
 
 def main():
     st.title("Stock Price Chart with Key Levels")
