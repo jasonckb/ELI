@@ -29,9 +29,12 @@ def calculate_ema(data, period):
     return data['Close'].ewm(span=period, adjust=False).mean()
 
 def calculate_volume_profile(data, bins=100):
+    price_range = data['Close'].max() - data['Close'].min()
+    bin_size = price_range / bins
     price_bins = pd.cut(data['Close'], bins=bins)
     volume_profile = data.groupby(price_bins)['Volume'].sum()
-    return volume_profile
+    bin_centers = [(i.left + i.right) / 2 for i in volume_profile.index]
+    return volume_profile, bin_centers, bin_size
 
 def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig = go.Figure()
@@ -89,15 +92,15 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
                        showarrow=False, xanchor="left", font=dict(size=14, color="black"))
 
     # Calculate and add volume profile
-    volume_profile = calculate_volume_profile(data)
+    volume_profile, bin_centers, bin_size = calculate_volume_profile(data)
     max_volume = volume_profile.max()
     fig.add_trace(go.Bar(
         x=volume_profile.values,
-        y=volume_profile.index.mid,
+        y=bin_centers,
         orientation='h',
         name='Volume Profile',
         marker_color='rgba(200, 200, 200, 0.5)',
-        width=(volume_profile.index.right - volume_profile.index.left),
+        width=bin_size,
         xaxis='x2'
     ))
 
