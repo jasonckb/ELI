@@ -324,18 +324,7 @@ def main():
 
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                try:
-                    news = get_yahoo_finance_news(st.session_state.formatted_ticker)
-                    if news:
-                        for title, link in news:
-                            st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
-                    else:
-                        st.info("No news items were found. This could be due to:")
-                        st.info("1. No recent news for this stock")
-                        st.info("2. Changes in the Yahoo Finance website structure")
-                        st.info("3. Limitations on automated access to Yahoo Finance")
-                except Exception as e:
-                    st.error(f"Error fetching or displaying news: {str(e)}")
+                
                 
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
