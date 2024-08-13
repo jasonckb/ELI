@@ -7,6 +7,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import plotly.io as pio
+import os
 
 
 # Set page to wide mode
@@ -331,23 +332,25 @@ def main():
                 # Add screenshot button
                 if st.button("Take Screenshot"):
                     try:
-                        # Convert the figure to a PNG image
-                        img_bytes = pio.to_image(fig, format="png")
+                        # Save the figure as a temporary file
+                        temp_file = f"{st.session_state.formatted_ticker}_chart.png"
+                        pio.write_image(fig, temp_file)
                         
-                        # Create a download button for the screenshot
-                        st.download_button(
-                            label="Download Chart Screenshot",
-                            data=img_bytes,
-                            file_name=f"{st.session_state.formatted_ticker}_chart.png",
-                            mime="image/png"
-                        )
-                    except ValueError as ve:
-                        if "kaleido" in str(ve):
-                            st.error("Unable to generate screenshot. Please install kaleido: pip install -U kaleido")
-                        else:
-                            st.error(f"Error generating screenshot: {str(ve)}")
+                        # Read the file and create a download button
+                        with open(temp_file, "rb") as file:
+                            btn = st.download_button(
+                                label="Download Chart Screenshot",
+                                data=file,
+                                file_name=f"{st.session_state.formatted_ticker}_chart.png",
+                                mime="image/png"
+                            )
+                        
+                        # Remove the temporary file
+                        os.remove(temp_file)
+                        
                     except Exception as e:
-                        st.error(f"Unexpected error generating screenshot: {str(e)}")
+                        st.error(f"Error generating screenshot: {str(e)}")
+                        st.error("If the error persists, please try updating plotly and kaleido: pip install -U plotly kaleido")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
