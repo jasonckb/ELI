@@ -1,10 +1,9 @@
 import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -211,63 +210,7 @@ def get_financial_metrics(ticker):
     
     return metrics
 
-def get_yahoo_finance_news(ticker):
-    st.write(f"Attempting to fetch news for {ticker}")
-    
-    # Check if it's a Hong Kong stock
-    if ticker.endswith('.HK'):
-        url = f"https://finance.yahoo.com/quote/{ticker}/news"
-    else:
-        url = f"https://finance.yahoo.com/quote/{ticker}"
-    
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    
-    try:
-        st.write(f"Sending request to {url}")
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an exception for bad status codes
-        
-        st.write("Parsing HTML content...")
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Try different selectors for news items
-        news_items = soup.find_all('li', class_='js-stream-content')
-        if not news_items:
-            news_items = soup.find_all('div', {'class': 'Ov(h) Pend(44px) Pstart(25px)'})
-        
-        st.write(f"Found {len(news_items)} news items")
-        
-        if not news_items:
-            st.warning(f"No news items found for {ticker}. The website structure might have changed.")
-            st.write("HTML content (first 500 characters):")
-            st.write(soup.prettify()[:500])
-            return []
-        
-        news = []
-        for item in news_items[:5]:  # Get top 5 news items
-            title_element = item.find('h3') or item.find('a')
-            link_element = item.find('a')
-            
-            if title_element and link_element:
-                title = title_element.text.strip()
-                link = link_element.get('href')
-                if not link.startswith('http'):
-                    link = "https://finance.yahoo.com" + link
-                news.append((title, link))
-                st.write(f"Found news: {title}")
-            else:
-                st.warning(f"Couldn't extract title or link for a news item. The website structure might have changed.")
-        
-        if not news:
-            st.warning(f"Couldn't extract any news for {ticker}. The website structure might have changed.")
-        
-        return news
-    except requests.RequestException as e:
-        st.error(f"Error fetching news: Request failed. Error: {str(e)}")
-    except Exception as e:
-        st.error(f"Error fetching news: Unexpected error occurred. Error: {str(e)}")
-    
-    return []
+
 
 def main():
     st.title("Stock Price Chart with Key Levels")
@@ -313,7 +256,7 @@ def main():
             # Main chart and data display
             with col2:
                 # Add financial metrics above the chart
-                st.markdown("<h3>Financial Metrics:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
                     cols = st.columns(3)  # Create 3 columns for metrics display
@@ -338,19 +281,6 @@ def main():
                 st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
-
-                # Display news
-                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
-                if news:
-                    for title, link in news:
-                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
-                else:
-                    st.info("No news items were found. This could be due to:")
-                    st.info("1. No recent news for this stock")
-                    st.info("2. Changes in the Yahoo Finance website structure")
-                    st.info("3. Limitations on automated access to Yahoo Finance")
-                    st.info("You can try visiting the Yahoo Finance page directly for news.")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
