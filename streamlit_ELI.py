@@ -6,10 +6,7 @@ import pandas as pd
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import pyautogui
-from PIL import Image
-import io
-import base64
+
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -324,19 +321,14 @@ def main():
 
                 # Add screenshot button
                 if st.button("Take Screenshot"):
-                    # Capture the screenshot
-                    screenshot = pyautogui.screenshot()
-                    
-                    # Convert the screenshot to bytes
-                    img_byte_arr = io.BytesIO()
-                    screenshot.save(img_byte_arr, format='PNG')
-                    img_byte_arr = img_byte_arr.getvalue()
+                    # Convert the figure to a PNG image
+                    img_bytes = pio.to_image(fig, format="png")
                     
                     # Create a download button for the screenshot
                     st.download_button(
-                        label="Download Screenshot",
-                        data=img_byte_arr,
-                        file_name=f"{st.session_state.formatted_ticker}_screenshot.png",
+                        label="Download Chart Screenshot",
+                        data=img_bytes,
+                        file_name=f"{st.session_state.formatted_ticker}_chart.png",
                         mime="image/png"
                     )
 
