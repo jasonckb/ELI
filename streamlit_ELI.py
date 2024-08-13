@@ -241,7 +241,7 @@ def get_yahoo_finance_news(ticker):
             
             if title_element and link_element:
                 title = title_element.text.strip()
-                link = "https://finance.yahoo.com" + link_element['href'] if link_element['href'].startswith('/') else link_element['href']
+                link = "https://finance.yahoo.com/news" + link_element['href'] if link_element['href'].startswith('/') else link_element['href']
                 news.append((title, link))
         
         return news
