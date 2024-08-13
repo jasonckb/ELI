@@ -244,7 +244,7 @@ def get_yahoo_finance_news(ticker):
                 link = link_element['href']
                 # Ensure the link is absolute
                 if not link.startswith('http'):
-                    link = "https://finance.yahoo.com" + link
+                    link = "https://finance.yahoo.com/news" + link
                 news.append((title, link))
         
         return news
