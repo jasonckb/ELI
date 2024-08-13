@@ -1,9 +1,10 @@
 import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
