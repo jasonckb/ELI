@@ -4,8 +4,6 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -212,43 +210,8 @@ def get_financial_metrics(ticker):
     
     return metrics
 
-def get_yahoo_finance_news(ticker):
-    url = f"https://finance.yahoo.com/quote/{ticker}/"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an exception for bad status codes
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        news_items = soup.find_all('li', class_='js-stream-content')
-        
-        if not news_items:
-            st.warning(f"No news items found for {ticker}. The website structure might have changed.")
-            return []
-        
-        news = []
-        for item in news_items[:5]:  # Get top 5 news items
-            title_element = item.find('h3')
-            link_element = item.find('a')
-            
-            if title_element and link_element:
-                title = title_element.text
-                link = "https://finance.yahoo.com" + link_element['href']
-                news.append((title, link))
-            else:
-                st.warning(f"Couldn't extract title or link for a news item. The website structure might have changed.")
-        
-        if not news:
-            st.warning(f"Couldn't extract any news for {ticker}. The website structure might have changed.")
-        
-        return news
-    except requests.RequestException as e:
-        st.error(f"Error fetching news: Request failed. Error: {str(e)}")
-    except Exception as e:
-        st.error(f"Error fetching news: Unexpected error occurred. Error: {str(e)}")
-    
-    return []
+
+
 def main():
     st.title("Stock Price Chart with Key Levels")
 
@@ -277,7 +240,7 @@ def main():
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
 
-   # Main logic
+    # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
             current_price = st.session_state.data['Close'].iloc[-1]
@@ -293,7 +256,7 @@ def main():
             # Main chart and data display
             with col2:
                 # Add financial metrics above the chart
-                st.markdown("<h3>Financial Metrics:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
                     cols = st.columns(3)  # Create 3 columns for metrics display
@@ -319,15 +282,6 @@ def main():
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
 
-                # Display news
-                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
-                if news:
-                    for title, link in news:
-                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
-                else:
-                    st.info("No news items were found or there was an error fetching news. Check the warnings/errors above for more details.")
-
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.write("Debug information:")
@@ -336,3 +290,6 @@ def main():
             st.write(f"Data head:\n{st.session_state.data.head()}")
     else:
         st.warning("No data available. Please check the ticker symbol and try again.")
+
+if __name__ == "__main__":
+    main()
