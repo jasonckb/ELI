@@ -6,3 +6,4 @@ matplotlib
 datetime
 plotly
 requests
+beautifulsoup4

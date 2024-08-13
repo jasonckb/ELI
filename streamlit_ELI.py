@@ -218,8 +218,14 @@ def get_yahoo_finance_news(ticker):
     
     try:
         response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
         soup = BeautifulSoup(response.text, 'html.parser')
         news_items = soup.find_all('li', class_='js-stream-content')
+        
+        if not news_items:
+            st.warning(f"No news items found for {ticker}. The website structure might have changed.")
+            return []
         
         news = []
         for item in news_items[:5]:  # Get top 5 news items
@@ -230,12 +236,19 @@ def get_yahoo_finance_news(ticker):
                 title = title_element.text
                 link = "https://finance.yahoo.com" + link_element['href']
                 news.append((title, link))
+            else:
+                st.warning(f"Couldn't extract title or link for a news item. The website structure might have changed.")
+        
+        if not news:
+            st.warning(f"Couldn't extract any news for {ticker}. The website structure might have changed.")
         
         return news
+    except requests.RequestException as e:
+        st.error(f"Error fetching news: Request failed. Error: {str(e)}")
     except Exception as e:
-        st.error(f"Error fetching news: {str(e)}")
-        return []
-
+        st.error(f"Error fetching news: Unexpected error occurred. Error: {str(e)}")
+    
+    return []
 def main():
     st.title("Stock Price Chart with Key Levels")
 
@@ -309,8 +322,11 @@ def main():
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 news = get_yahoo_finance_news(st.session_state.formatted_ticker)
-                for title, link in news:
-                    st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+                if news:
+                    for title, link in news:
+                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+                else:
+                    st.info("No news items were found or there was an error fetching news. Check the warnings/errors above for more details.")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
