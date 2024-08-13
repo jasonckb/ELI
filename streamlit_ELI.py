@@ -6,6 +6,10 @@ import pandas as pd
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
+import pyautogui
+from PIL import Image
+import io
+import base64
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -283,15 +287,7 @@ def main():
     # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
-            current_price = st.session_state.data['Close'].iloc[-1]
-            strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
-
-            # Display current price and calculated levels in the sidebar
-            with col1:
-                st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p>Strike Price ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
+            # ... (previous code remains the same)
 
             # Main chart and data display
             with col2:
@@ -324,9 +320,25 @@ def main():
 
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                
-                
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
+
+                # Add screenshot button
+                if st.button("Take Screenshot"):
+                    # Capture the screenshot
+                    screenshot = pyautogui.screenshot()
+                    
+                    # Convert the screenshot to bytes
+                    img_byte_arr = io.BytesIO()
+                    screenshot.save(img_byte_arr, format='PNG')
+                    img_byte_arr = img_byte_arr.getvalue()
+                    
+                    # Create a download button for the screenshot
+                    st.download_button(
+                        label="Download Screenshot",
+                        data=img_byte_arr,
+                        file_name=f"{st.session_state.formatted_ticker}_screenshot.png",
+                        mime="image/png"
+                    )
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
