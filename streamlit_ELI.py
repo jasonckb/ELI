@@ -210,7 +210,49 @@ def get_financial_metrics(ticker):
     
     return metrics
 
-
+def get_yahoo_finance_news(ticker):
+    st.write(f"Attempting to fetch news for {ticker}")
+    url = f"https://finance.yahoo.com/quote/{ticker}/"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    
+    try:
+        st.write("Sending request to Yahoo Finance...")
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        
+        st.write("Parsing HTML content...")
+        soup = BeautifulSoup(response.text, 'html.parser')
+        news_items = soup.find_all('li', class_='js-stream-content')
+        
+        st.write(f"Found {len(news_items)} news items")
+        
+        if not news_items:
+            st.warning(f"No news items found for {ticker}. The website structure might have changed.")
+            return []
+        
+        news = []
+        for item in news_items[:5]:  # Get top 5 news items
+            title_element = item.find('h3')
+            link_element = item.find('a')
+            
+            if title_element and link_element:
+                title = title_element.text
+                link = "https://finance.yahoo.com" + link_element['href']
+                news.append((title, link))
+                st.write(f"Found news: {title}")
+            else:
+                st.warning(f"Couldn't extract title or link for a news item. The website structure might have changed.")
+        
+        if not news:
+            st.warning(f"Couldn't extract any news for {ticker}. The website structure might have changed.")
+        
+        return news
+    except requests.RequestException as e:
+        st.error(f"Error fetching news: Request failed. Error: {str(e)}")
+    except Exception as e:
+        st.error(f"Error fetching news: Unexpected error occurred. Error: {str(e)}")
+    
+    return []
 
 def main():
     st.title("Stock Price Chart with Key Levels")
@@ -243,6 +285,7 @@ def main():
     # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
+            st.write("Processing stock data...")
             current_price = st.session_state.data['Close'].iloc[-1]
             strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
 
@@ -255,8 +298,9 @@ def main():
 
             # Main chart and data display
             with col2:
+                st.write("Fetching financial metrics...")
                 # Add financial metrics above the chart
-                st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Financial Metrics:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
                     cols = st.columns(3)  # Create 3 columns for metrics display
@@ -268,11 +312,13 @@ def main():
                 # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
 
+                st.write("Plotting stock chart...")
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
                 st.plotly_chart(fig, use_container_width=True)
 
+                st.write("Calculating EMAs...")
                 # Display EMA values
                 st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
                 ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
@@ -281,6 +327,16 @@ def main():
                 st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
+
+                st.write("Fetching news...")
+                # Display news
+                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
+                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
+                if news:
+                    for title, link in news:
+                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+                else:
+                    st.info("No news items were found or there was an error fetching news. Check the warnings/errors above for more details.")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
