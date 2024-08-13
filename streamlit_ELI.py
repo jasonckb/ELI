@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -210,6 +212,30 @@ def get_financial_metrics(ticker):
     
     return metrics
 
+def get_yahoo_finance_news(ticker):
+    url = f"https://finance.yahoo.com/quote/{ticker}/"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    
+    try:
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        news_items = soup.find_all('li', class_='js-stream-content')
+        
+        news = []
+        for item in news_items[:5]:  # Get top 5 news items
+            title_element = item.find('h3')
+            link_element = item.find('a')
+            
+            if title_element and link_element:
+                title = title_element.text
+                link = "https://finance.yahoo.com" + link_element['href']
+                news.append((title, link))
+        
+        return news
+    except Exception as e:
+        st.error(f"Error fetching news: {str(e)}")
+        return []
+
 def main():
     st.title("Stock Price Chart with Key Levels")
 
@@ -238,7 +264,7 @@ def main():
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
 
-    # Main logic
+   # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
             current_price = st.session_state.data['Close'].iloc[-1]
@@ -280,6 +306,12 @@ def main():
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
 
+                # Display news
+                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
+                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
+                for title, link in news:
+                    st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.write("Debug information:")
@@ -288,6 +320,3 @@ def main():
             st.write(f"Data head:\n{st.session_state.data.head()}")
     else:
         st.warning("No data available. Please check the ticker symbol and try again.")
-
-if __name__ == "__main__":
-    main()
