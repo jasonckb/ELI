@@ -6,9 +6,6 @@ import pandas as pd
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import plotly.io as pio
-import os
-
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -327,30 +324,9 @@ def main():
 
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
+                
+                
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
-
-                # Add screenshot button
-                if st.button("Take Screenshot"):
-                    try:
-                        # Save the figure as a temporary file
-                        temp_file = f"{st.session_state.formatted_ticker}_chart.png"
-                        pio.write_image(fig, temp_file)
-                        
-                        # Read the file and create a download button
-                        with open(temp_file, "rb") as file:
-                            btn = st.download_button(
-                                label="Download Chart Screenshot",
-                                data=file,
-                                file_name=f"{st.session_state.formatted_ticker}_chart.png",
-                                mime="image/png"
-                            )
-                        
-                        # Remove the temporary file
-                        os.remove(temp_file)
-                        
-                    except Exception as e:
-                        st.error(f"Error generating screenshot: {str(e)}")
-                        st.error("If the error persists, please try updating plotly and kaleido: pip install -U plotly kaleido")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
