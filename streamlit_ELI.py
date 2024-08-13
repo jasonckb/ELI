@@ -187,21 +187,32 @@ def get_financial_metrics(ticker):
     info = stock.info
     
     metrics = {
-        "Market Cap": info.get("marketCap", "N/A"),
-        "Enterprise Value": info.get("enterpriseValue", "N/A"),
+        "Market Cap": info.get("marketCap", "N/A"),       
         "Trailing P/E": info.get("trailingPE", "N/A"),
         "Forward P/E": info.get("forwardPE", "N/A"),
         "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
         "Price/Sales": info.get("priceToSalesTrailing12Months", "N/A"),
         "Price/Book": info.get("priceToBook", "N/A"),
-        "Enterprise Value/Revenue": info.get("enterpriseToRevenue", "N/A"),
-        "Enterprise Value/EBITDA": info.get("enterpriseToEbitda", "N/A")
+        "Net Income": info.get("netIncomeToCommon", "N/A"),
+        "Revenue": info.get("revenue", "N/A"),
+        "Profit Margin": info.get("profitMargin", "N/A"),
+        "ROE": info.get("returnOnEquity", "N/A"),
     }
     
     # Format large numbers
-    for key in ["Market Cap", "Enterprise Value"]:
+    for key in ["Market Cap", "Net Income", "Revenue"]:
         if isinstance(metrics[key], (int, float)):
-            metrics[key] = f"{metrics[key]/1e12:.2f}T" if metrics[key] >= 1e12 else f"{metrics[key]/1e9:.2f}B"
+            if abs(metrics[key]) >= 1e12:
+                metrics[key] = f"{metrics[key]/1e12:.2f}T"
+            elif abs(metrics[key]) >= 1e9:
+                metrics[key] = f"{metrics[key]/1e9:.2f}B"
+            elif abs(metrics[key]) >= 1e6:
+                metrics[key] = f"{metrics[key]/1e6:.2f}M"
+    
+    # Format percentages
+    for key in ["Profit Margin", "ROE"]:
+        if isinstance(metrics[key], float):
+            metrics[key] = f"{metrics[key]:.2%}"
     
     # Round floating point numbers
     for key, value in metrics.items():
