@@ -7,3 +7,4 @@ datetime
 plotly
 requests
 beautifulsoup4
+kaleido
