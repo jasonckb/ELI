@@ -339,7 +339,7 @@ def main():
                         st.info("1. No recent news for this stock")
                         st.info("2. Changes in the Yahoo Finance website structure")
                         st.info("3. Limitations on automated access to Yahoo Finance")
-                    st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/news/{st.session_state.formatted_ticker}")
+                    st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
                 except Exception as e:
                     st.error(f"Error fetching or displaying news: {str(e)}")
 
