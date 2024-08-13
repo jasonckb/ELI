@@ -285,7 +285,15 @@ def main():
     # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
-            # ... (previous code remains the same)
+            current_price = st.session_state.data['Close'].iloc[-1]
+            strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
+
+            # Display current price and calculated levels in the sidebar
+            with col1:
+                st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
+                st.markdown(f"<p>Strike Price ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
 
             # Main chart and data display
             with col2:
