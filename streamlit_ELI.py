@@ -224,7 +224,7 @@ def get_financial_metrics(ticker):
     return metrics
 
 def get_yahoo_finance_news(ticker):
-    url = f"https://finance.yahoo.com/quote/{ticker}/news"
+    url = f"https://finance.yahoo.com/quote/{ticker}"
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     
     try:
@@ -232,7 +232,12 @@ def get_yahoo_finance_news(ticker):
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        news_items = soup.find_all('li', class_='js-stream-content')
+        news_section = soup.find('div', {'id': 'quoteNewsStream-0-Stream'})
+        
+        if not news_section:
+            return []
+        
+        news_items = news_section.find_all('li', class_='js-stream-content')
         
         news = []
         for item in news_items[:5]:  # Get top 5 news items
@@ -243,8 +248,8 @@ def get_yahoo_finance_news(ticker):
                 title = title_element.text.strip()
                 link = link_element['href']
                 # Ensure the link is absolute
-                if not link.startswith('http'):
-                    link = "https://finance.yahoo.com/news" + link
+                if link.startswith('/'):
+                    link = f"https://finance.yahoo.com{link}"
                 news.append((title, link))
         
         return news
@@ -324,16 +329,19 @@ def main():
 
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
-                if news:
-                    for title, link in news:
-                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
-                else:
-                    st.info("No news items were found. This could be due to:")
-                    st.info("1. No recent news for this stock")
-                    st.info("2. Changes in the Yahoo Finance website structure")
-                    st.info("3. Limitations on automated access to Yahoo Finance")
-                    st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news")
+                try:
+                    news = get_yahoo_finance_news(st.session_state.formatted_ticker)
+                    if news:
+                        for title, link in news:
+                            st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+                    else:
+                        st.info("No news items were found. This could be due to:")
+                        st.info("1. No recent news for this stock")
+                        st.info("2. Changes in the Yahoo Finance website structure")
+                        st.info("3. Limitations on automated access to Yahoo Finance")
+                    st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}")
+                except Exception as e:
+                    st.error(f"Error fetching or displaying news: {str(e)}")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
