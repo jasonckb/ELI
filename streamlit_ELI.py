@@ -224,7 +224,7 @@ def get_financial_metrics(ticker):
     return metrics
 
 def get_yahoo_finance_news(ticker):
-    url = f"https://finance.yahoo.com/quote/{ticker}/news/"
+    url = f"https://finance.yahoo.com/quote/{ticker}/news"
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     
     try:
@@ -241,7 +241,10 @@ def get_yahoo_finance_news(ticker):
             
             if title_element and link_element:
                 title = title_element.text.strip()
-                link = "https://finance.yahoo.com/news" + link_element['href'] if link_element['href'].startswith('/') else link_element['href']
+                link = link_element['href']
+                # Ensure the link is absolute
+                if not link.startswith('http'):
+                    link = "https://finance.yahoo.com" + link
                 news.append((title, link))
         
         return news
@@ -293,7 +296,7 @@ def main():
             # Main chart and data display
             with col2:
                 # Add financial metrics above the chart
-                st.markdown("<h3>Financial Metrics:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
                     cols = st.columns(2)  # Create 2 columns for metrics display
@@ -330,7 +333,7 @@ def main():
                     st.info("1. No recent news for this stock")
                     st.info("2. Changes in the Yahoo Finance website structure")
                     st.info("3. Limitations on automated access to Yahoo Finance")
-                    st.info("You can try visiting the Yahoo Finance page directly for news.")
+                    st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
