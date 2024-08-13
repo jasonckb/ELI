@@ -194,8 +194,8 @@ def get_financial_metrics(ticker):
         "Price/Sales": info.get("priceToSalesTrailing12Months", "N/A"),
         "Price/Book": info.get("priceToBook", "N/A"),
         "Net Income": info.get("netIncomeToCommon", "N/A"),
-        "Revenue": info.get("revenue", "N/A"),
-        "Profit Margin": info.get("profitMargin", "N/A"),
+        "Revenue": info.get("totalRevenue", "N/A"),  # Changed from "revenue" to "totalRevenue"
+        "Profit Margin": info.get("profitMargins", "N/A"),  # Changed from "profitMargin" to "profitMargins"
         "ROE": info.get("returnOnEquity", "N/A"),
     }
     
@@ -220,7 +220,6 @@ def get_financial_metrics(ticker):
             metrics[key] = round(value, 2)
     
     return metrics
-
 
 
 def main():
@@ -270,9 +269,9 @@ def main():
                 st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
-                    cols = st.columns(3)  # Create 3 columns for metrics display
+                    cols = st.columns(2)  # Create 2 columns for metrics display
                     for i, (key, value) in enumerate(metrics.items()):
-                        cols[i % 3].markdown(f"<b>{key}:</b> {value}", unsafe_allow_html=True)
+                        cols[i % 2].markdown(f"<b>{key}:</b> {value}", unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
@@ -292,6 +291,19 @@ def main():
                 st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
+
+                # Display news
+                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
+                news = get_yahoo_finance_news(st.session_state.formatted_ticker)
+                if news:
+                    for title, link in news:
+                        st.markdown(f"<a href='{link}' target='_blank'>{title}</a>", unsafe_allow_html=True)
+                else:
+                    st.info("No news items were found. This could be due to:")
+                    st.info("1. No recent news for this stock")
+                    st.info("2. Changes in the Yahoo Finance website structure")
+                    st.info("3. Limitations on automated access to Yahoo Finance")
+                    st.info("You can try visiting the Yahoo Finance page directly for news.")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
