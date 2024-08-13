@@ -30,37 +30,31 @@ def calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct):
 def calculate_ema(data, period):
     return data['Close'].ewm(span=period, adjust=False).mean()
 
-def calculate_volume_profile(data, bins=50):
+def calculate_volume_profile(data, bins=40):
     price_range = data['Close'].max() - data['Close'].min()
     bin_size = price_range / bins
     price_bins = pd.cut(data['Close'], bins=bins)
     volume_profile = data.groupby(price_bins)['Volume'].sum()
     bin_centers = [(i.left + i.right) / 2 for i in volume_profile.index]
     
-    # Ensure there are no gaps in the profile
-    full_range = np.linspace(data['Close'].min(), data['Close'].max(), bins)
-    full_profile = pd.Series(index=full_range, data=0)
-    full_profile.update(volume_profile)
-    
     # Calculate POC
-    poc_price = full_profile.idxmax()
+    poc_price = bin_centers[volume_profile.argmax()]
     
     # Calculate Value Area (70% of volume)
-    total_volume = full_profile.sum()
+    total_volume = volume_profile.sum()
     target_volume = total_volume * 0.7
     cumulative_volume = 0
     value_area_low = value_area_high = poc_price
     
-    sorted_profile = full_profile.sort_values(ascending=False)
-    for price, volume in sorted_profile.items():
+    for price, volume in zip(bin_centers, volume_profile):
         cumulative_volume += volume
-        if cumulative_volume <= target_volume:
-            value_area_low = min(value_area_low, price)
-            value_area_high = max(value_area_high, price)
-        else:
+        if cumulative_volume <= target_volume / 2:
+            value_area_low = price
+        if cumulative_volume >= total_volume - target_volume / 2:
+            value_area_high = price
             break
     
-    return full_profile, full_range, bin_size, poc_price, value_area_low, value_area_high
+    return volume_profile, bin_centers, bin_size, poc_price, value_area_low, value_area_high
 
 def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig = go.Figure()
@@ -128,7 +122,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     fig.add_annotation(x=annotation_x, y=current_price, text=f"Current Price: {current_price:.2f}",
                        showarrow=False, xanchor="left", font=dict(size=14, color="black"))
 
-     # Calculate and add volume profile
+    # Calculate and add volume profile
     volume_profile, bin_centers, bin_size, poc_price, value_area_low, value_area_high = calculate_volume_profile(data)
     max_volume = volume_profile.max()
     fig.add_trace(go.Bar(
