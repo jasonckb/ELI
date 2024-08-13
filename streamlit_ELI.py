@@ -330,16 +330,24 @@ def main():
 
                 # Add screenshot button
                 if st.button("Take Screenshot"):
-                    # Convert the figure to a PNG image
-                    img_bytes = pio.to_image(fig, format="png")
-                    
-                    # Create a download button for the screenshot
-                    st.download_button(
-                        label="Download Chart Screenshot",
-                        data=img_bytes,
-                        file_name=f"{st.session_state.formatted_ticker}_chart.png",
-                        mime="image/png"
-                    )
+                    try:
+                        # Convert the figure to a PNG image
+                        img_bytes = pio.to_image(fig, format="png")
+                        
+                        # Create a download button for the screenshot
+                        st.download_button(
+                            label="Download Chart Screenshot",
+                            data=img_bytes,
+                            file_name=f"{st.session_state.formatted_ticker}_chart.png",
+                            mime="image/png"
+                        )
+                    except ValueError as ve:
+                        if "kaleido" in str(ve):
+                            st.error("Unable to generate screenshot. Please install kaleido: pip install -U kaleido")
+                        else:
+                            st.error(f"Error generating screenshot: {str(ve)}")
+                    except Exception as e:
+                        st.error(f"Unexpected error generating screenshot: {str(e)}")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
