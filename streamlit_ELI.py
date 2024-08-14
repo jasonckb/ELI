@@ -190,7 +190,7 @@ def get_financial_metrics(ticker):
     
     metrics = {
         "Market Cap": info.get("marketCap", "N/A"),       
-        "Trailing P/E": info.get("trailingPE", "N/A"),
+        "Historical P/E": info.get("trailingPE", "N/A"),
         "Forward P/E": info.get("forwardPE", "N/A"),
         "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
         "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100,
