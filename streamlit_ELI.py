@@ -193,7 +193,7 @@ def get_financial_metrics(ticker):
         "Trailing P/E": info.get("trailingPE", "N/A"),
         "Forward P/E": info.get("forwardPE", "N/A"),
         "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
-        "Historical Dividend Yield %": info.get("trailingAnnualDividendYield", "N/A")*10,
+        "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100,
         "Price/Book": info.get("priceToBook", "N/A"),
         "Net Income": info.get("netIncomeToCommon", "N/A"),
         "Revenue": info.get("totalRevenue", "N/A"),  # Changed from "revenue" to "totalRevenue"
