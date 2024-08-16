@@ -351,26 +351,47 @@ def main():
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     
-                    # Debug information
-                    st.write("Debug: Analyst Recommendations")
-                    st.write(stock.recommendations)
-                    
-                    st.write("Debug: Analyst Recommendations Summary")
-                    st.write(stock.recommendations_summary)
-                    
-                    # If the above debug info shows data, we can proceed to format and display it
                     if not stock.recommendations_summary.empty:
-                        summary = stock.recommendations_summary.set_index('To Grade')['Count'].to_dict()
-                        
                         st.subheader("Recommendation Summary")
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("Buy", summary.get('Buy', 'N/A'))
-                        col2.metric("Hold", summary.get('Hold', 'N/A'))
-                        col3.metric("Sell", summary.get('Sell', 'N/A'))
-                    
+                        summary = stock.recommendations_summary.set_index('period')
+
+                        # Create a bar chart for the summary
+                        fig_summary = go.Figure()
+                        categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
+                        colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
+
+                        for category, color in zip(categories, colors):
+                            fig_summary.add_trace(go.Bar(
+                                x=summary.index,
+                                y=summary[category],
+                                name=category.capitalize(),
+                                marker_color=color
+                            ))
+
+                        fig_summary.update_layout(
+                            barmode='stack',
+                            title="Analyst Recommendations Over Time",
+                            xaxis_title="Period",
+                            yaxis_title="Number of Recommendations",
+                            legend_title="Recommendation Type"
+                        )
+
+                        st.plotly_chart(fig_summary, use_container_width=True)
+
+                        # Display the latest recommendations
+                        latest = summary.iloc[0]
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        col1.metric("Strong Buy", latest['strongBuy'])
+                        col2.metric("Buy", latest['buy'])
+                        col3.metric("Hold", latest['hold'])
+                        col4.metric("Sell", latest['sell'])
+                        col5.metric("Strong Sell", latest['strongSell'])
+
                     if not stock.recommendations.empty:
                         st.subheader("Recent Analyst Recommendations")
-                        st.dataframe(stock.recommendations.tail())
+                        recent_recommendations = stock.recommendations.tail().reset_index()
+                        recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
+                        st.dataframe(recent_recommendations[['Date', 'Firm', 'To Grade', 'From Grade', 'Action']])
                     
                     if stock.recommendations_summary.empty and stock.recommendations.empty:
                         st.write("No analyst recommendations available.")
