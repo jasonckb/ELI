@@ -395,23 +395,7 @@ def main():
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
 
-                    if not stock.recommendations.empty:
-                        st.subheader("Recent Analyst Recommendations")
-                        recent_recommendations = stock.recommendations.tail().reset_index()
-                        if 'Date' in recent_recommendations.columns:
-                            recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
-                            columns_to_display = ['Date', 'Firm', 'To Grade', 'From Grade', 'Action']
-                        else:
-                            columns_to_display = ['Firm', 'To Grade', 'From Grade', 'Action']
-                        
-                        try:
-                            st.dataframe(recent_recommendations[columns_to_display])
-                        except KeyError as e:
-                            st.error(f"Error displaying recent recommendations: {str(e)}")
-                            st.write("Available columns:", recent_recommendations.columns)
                     
-                    if stock.recommendations_summary.empty and stock.recommendations.empty:
-                        st.write("No analyst recommendations available.")
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
 
@@ -436,29 +420,7 @@ def main():
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
-                # Add screenshot button
-                if st.button("Take Screenshot"):
-                    try:
-                        # Save the figure as a temporary file
-                        temp_file = f"{st.session_state.formatted_ticker}_chart.png"
-                        pio.write_image(fig, temp_file)
-                        
-                        # Read the file and create a download button
-                        with open(temp_file, "rb") as file:
-                            btn = st.download_button(
-                                label="Download Chart Screenshot",
-                                data=file,
-                                file_name=f"{st.session_state.formatted_ticker}_chart.png",
-                                mime="image/png"
-                            )
-                        
-                        # Remove the temporary file
-                        os.remove(temp_file)
-                        
-                    except Exception as e:
-                        st.error(f"Error generating screenshot: {str(e)}")
-                        st.error("If the error persists, please try updating plotly and kaleido: pip install -U plotly kaleido")
-
+                
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.write("Debug information:")
