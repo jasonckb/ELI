@@ -351,27 +351,27 @@ def main():
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     
-                    recommendations = stock.recommendations
-                    
-                    if recommendations is not None and not recommendations.empty:
+                    if not stock.recommendations_summary.empty:
                         st.subheader("Recommendation Summary")
-                        
-                        # Convert 'period' to datetime if it's not already
-                        if recommendations['period'].dtype != 'datetime64[ns]':
-                            recommendations['period'] = pd.to_datetime(recommendations['period'])
-                        
-                        # Sort by period and get the latest recommendations
-                        latest_recommendations = recommendations.sort_values('period', ascending=False).head(4)
-                        
+                        summary = stock.recommendations_summary.set_index('period')
+
                         # Create a bar chart for the summary
                         fig_summary = go.Figure()
                         categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
                         colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
 
+                        # Create a mapping for x-axis labels
+                        period_labels = {
+                            '0m': 'Current Month',
+                            '-1m': '1 Month Ago',
+                            '-2m': '2 Months Ago',
+                            '-3m': '3 Months Ago'
+                        }
+
                         for category, color in zip(categories, colors):
                             fig_summary.add_trace(go.Bar(
-                                x=latest_recommendations['period'],
-                                y=latest_recommendations[category],
+                                x=[period_labels.get(x, x) for x in summary.index],
+                                y=summary[category],
                                 name=category.capitalize(),
                                 marker_color=color
                             ))
@@ -387,7 +387,7 @@ def main():
                         st.plotly_chart(fig_summary, use_container_width=True)
 
                         # Display the latest recommendations
-                        latest = latest_recommendations.iloc[0]
+                        latest = summary.iloc[0]
                         col1, col2, col3, col4, col5 = st.columns(5)
                         col1.metric("Strong Buy", latest['strongBuy'])
                         col2.metric("Buy", latest['buy'])
@@ -395,14 +395,15 @@ def main():
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
                     else:
-                        st.write("No recommendation data available.")
+                        st.write("No recommendation summary available.")
 
                     # Add debug information
                     st.write("Debug information:")
-                    st.write(f"Recommendations shape: {recommendations.shape if recommendations is not None else 'N/A'}")
-                    st.write("Available columns in recommendations:", recommendations.columns.tolist() if recommendations is not None else 'N/A')
+                    st.write(f"Recommendations summary shape: {stock.recommendations_summary.shape if hasattr(stock, 'recommendations_summary') else 'N/A'}")
+                    st.write(f"Recommendations shape: {stock.recommendations.shape if hasattr(stock, 'recommendations') else 'N/A'}")
+                    st.write("Available columns in recommendations:", stock.recommendations.columns.tolist() if hasattr(stock, 'recommendations') else 'N/A')
                     st.write("First few rows of recommendations:")
-                    st.write(recommendations.head() if recommendations is not None else 'N/A')
+                    st.write(stock.recommendations.head() if hasattr(stock, 'recommendations') else 'N/A')
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
