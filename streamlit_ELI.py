@@ -347,58 +347,85 @@ def main():
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
                 # Add analyst ratings
-                st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
-                try:
-                    stock = yf.Ticker(st.session_state.formatted_ticker)
-                    
-                    if not stock.recommendations_summary.empty:
-                        st.subheader("Recommendation Summary")
-                        summary = stock.recommendations_summary.set_index('period')
+st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
+try:
+    stock = yf.Ticker(st.session_state.formatted_ticker)
+    
+    if not stock.recommendations_summary.empty:
+        st.subheader("Recommendation Summary")
+        summary = stock.recommendations_summary.set_index('period')
 
-                        # Create a bar chart for the summary
-                        fig_summary = go.Figure()
-                        categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
-                        colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
+        # Create a bar chart for the summary
+        fig_summary = go.Figure()
+        categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
+        colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
 
-                        # Create a mapping for x-axis labels
-                        period_labels = {
-                            '0m': 'Current Month',
-                            '-1m': '1 Month Ago',
-                            '-2m': '2 Months Ago',
-                            '-3m': '3 Months Ago'
-                        }
+        # Create a mapping for x-axis labels
+        period_labels = {
+            '0m': 'Current Month',
+            '-1m': '1 Month Ago',
+            '-2m': '2 Months Ago',
+            '-3m': '3 Months Ago'
+        }
 
-                        for category, color in zip(categories, colors):
-                            fig_summary.add_trace(go.Bar(
-                                x=[period_labels.get(x, x) for x in summary.index],
-                                y=summary[category],
-                                name=category.capitalize(),
-                                marker_color=color
-                            ))
+        for category, color in zip(categories, colors):
+            fig_summary.add_trace(go.Bar(
+                x=[period_labels.get(x, x) for x in summary.index],
+                y=summary[category],
+                name=category.capitalize(),
+                marker_color=color
+            ))
 
-                        fig_summary.update_layout(
-                            barmode='stack',
-                            title="Analyst Recommendations Over Time",
-                            xaxis_title="Period",
-                            yaxis_title="Number of Recommendations",
-                            legend_title="Recommendation Type"
-                        )
+        fig_summary.update_layout(
+            barmode='stack',
+            title="Analyst Recommendations Over Time",
+            xaxis_title="Period",
+            yaxis_title="Number of Recommendations",
+            legend_title="Recommendation Type"
+        )
 
-                        st.plotly_chart(fig_summary, use_container_width=True)
+        st.plotly_chart(fig_summary, use_container_width=True)
 
-                        # Display the latest recommendations
-                        latest = summary.iloc[0]
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        col1.metric("Strong Buy", latest['strongBuy'])
-                        col2.metric("Buy", latest['buy'])
-                        col3.metric("Hold", latest['hold'])
-                        col4.metric("Sell", latest['sell'])
-                        col5.metric("Strong Sell", latest['strongSell'])
+        # Display the latest recommendations
+        latest = summary.iloc[0]
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Strong Buy", latest['strongBuy'])
+        col2.metric("Buy", latest['buy'])
+        col3.metric("Hold", latest['hold'])
+        col4.metric("Sell", latest['sell'])
+        col5.metric("Strong Sell", latest['strongSell'])
 
-                    
-                except Exception as e:
-                    st.error(f"Error fetching analyst ratings: {str(e)}")
+    if not stock.recommendations.empty:
+        st.subheader("Recent Analyst Recommendations")
+        recent_recommendations = stock.recommendations.tail().reset_index()
+        
+        # Check if 'Date' column exists, if not, create it from the index
+        if 'Date' not in recent_recommendations.columns:
+            recent_recommendations['Date'] = recent_recommendations.index
 
+        # Ensure 'Date' column is in datetime format
+        recent_recommendations['Date'] = pd.to_datetime(recent_recommendations['Date'])
+        recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
+
+        # Define columns to display
+        columns_to_display = ['Date', 'Firm', 'To Grade', 'From Grade', 'Action']
+        
+        # Filter columns that exist in the DataFrame
+        existing_columns = [col for col in columns_to_display if col in recent_recommendations.columns]
+        
+        if existing_columns:
+            st.dataframe(recent_recommendations[existing_columns])
+        else:
+            st.write("No detailed recommendation data available.")
+            st.write("Available columns:", recent_recommendations.columns)
+    
+    if stock.recommendations_summary.empty and stock.recommendations.empty:
+        st.write("No analyst recommendations available.")
+except Exception as e:
+    st.error(f"Error fetching analyst ratings: {str(e)}")
+    st.write("Debug information:")
+    st.write(f"Recommendations summary shape: {stock.recommendations_summary.shape if hasattr(stock, 'recommendations_summary') else 'N/A'}")
+    st.write(f"Recommendations shape: {stock.recommendations.shape if hasattr(stock, 'recommendations') else 'N/A'}")
                 # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
 
