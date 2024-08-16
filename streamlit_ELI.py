@@ -402,24 +402,45 @@ def main():
                         # Ensure 'Date' column is in datetime format
                         recent_recommendations.index = pd.to_datetime(recent_recommendations.index)
                         
-                        # Create a new DataFrame with the desired columns and format
-                        display_recommendations = pd.DataFrame({
-                            'Date': recent_recommendations.index.date,
-                            'Firm': recent_recommendations['Firm'],
-                            'To Grade': recent_recommendations['To Grade'],
-                            'From Grade': recent_recommendations['From Grade'],
-                            'Action': recent_recommendations.apply(lambda row: f"{row['From Grade']} → {row['To Grade']}" if row['From Grade'] != row['To Grade'] else "Reiterated", axis=1)
-                        })
+                        # Check available columns and use them flexibly
+                        available_columns = recent_recommendations.columns
                         
-                        st.dataframe(display_recommendations)
+                        firm_column = next((col for col in ['Firm', 'firm', 'Company', 'company'] if col in available_columns), None)
+                        to_grade_column = next((col for col in ['To Grade', 'to_grade', 'New Rating', 'new_rating'] if col in available_columns), None)
+                        from_grade_column = next((col for col in ['From Grade', 'from_grade', 'Old Rating', 'old_rating'] if col in available_columns), None)
+                        
+                        if firm_column and to_grade_column:
+                            # Create a new DataFrame with the desired columns and format
+                            display_recommendations = pd.DataFrame({
+                                'Date': recent_recommendations.index.date,
+                                'Firm': recent_recommendations[firm_column] if firm_column else 'N/A',
+                                'To Grade': recent_recommendations[to_grade_column] if to_grade_column else 'N/A',
+                                'From Grade': recent_recommendations[from_grade_column] if from_grade_column else 'N/A',
+                                'Action': recent_recommendations.apply(
+                                    lambda row: f"{row[from_grade_column]} → {row[to_grade_column]}" 
+                                    if from_grade_column and to_grade_column and row[from_grade_column] != row[to_grade_column] 
+                                    else "Reiterated", 
+                                    axis=1
+                                ) if from_grade_column and to_grade_column else 'N/A'
+                            })
+                            
+                            st.dataframe(display_recommendations)
+                        else:
+                            st.write("Required columns not found in the recommendations data.")
                     
                     if stock.recommendations_summary.empty and stock.recommendations.empty:
                         st.write("No analyst recommendations available.")
-                except Exception as e:
-                    st.error(f"Error fetching analyst ratings: {str(e)}")
+
+                    # Add debug information
                     st.write("Debug information:")
                     st.write(f"Recommendations summary shape: {stock.recommendations_summary.shape if hasattr(stock, 'recommendations_summary') else 'N/A'}")
                     st.write(f"Recommendations shape: {stock.recommendations.shape if hasattr(stock, 'recommendations') else 'N/A'}")
+                    st.write("Available columns in recommendations:", stock.recommendations.columns.tolist() if hasattr(stock, 'recommendations') else 'N/A')
+                    st.write("First few rows of recommendations:")
+                    st.write(stock.recommendations.head() if hasattr(stock, 'recommendations') else 'N/A')
+
+                except Exception as e:
+                    st.error(f"Error fetching analyst ratings: {str(e)}")
 
                 # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -473,6 +494,3 @@ def main():
             st.write(f"Data head:\n{st.session_state.data.head()}")
     else:
         st.warning("No data available. Please check the ticker symbol and try again.")
-
-if __name__ == "__main__":
-    main()
