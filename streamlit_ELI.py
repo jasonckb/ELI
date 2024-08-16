@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
+import plotly.io as pio
+import os
+from yahoofinancials import YahooFinancials  # Add this line
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -252,6 +255,44 @@ def get_yahoo_finance_news(ticker):
         st.error(f"Error fetching news: {str(e)}")
         return []
     
+def get_analyst_ratings(ticker):
+    yahoo_financials = YahooFinancials(ticker)
+    analyst_data = yahoo_financials.get_stock_earnings_data()
+    
+    if analyst_data and ticker in analyst_data:
+        earnings_data = analyst_data[ticker]
+        if 'quarterly_earnings_data' in earnings_data:
+            quarterly_data = earnings_data['quarterly_earnings_data']
+            if quarterly_data:
+                latest_quarter = list(quarterly_data.keys())[0]
+                return quarterly_data[latest_quarter]
+    
+    return None
+
+def get_analyst_recommendations(ticker):
+    stock = yf.Ticker(ticker)
+    recommendations = stock.recommendations
+    if recommendations is not None and not recommendations.empty:
+        recent_recommendations = recommendations.tail(10)  # Get last 10 recommendations
+        upgrades = recent_recommendations[recent_recommendations['To Grade'] > recent_recommendations['From Grade']]
+        downgrades = recent_recommendations[recent_recommendations['To Grade'] < recent_recommendations['From Grade']]
+        
+        latest_recommendations = recommendations.iloc[-1]
+        buy_count = latest_recommendations.get('Buy', 0)
+        hold_count = latest_recommendations.get('Hold', 0)
+        sell_count = latest_recommendations.get('Sell', 0)
+        
+        return {
+            'upgrades': upgrades,
+            'downgrades': downgrades,
+            'summary': {
+                'Buy': buy_count,
+                'Hold': hold_count,
+                'Sell': sell_count
+            }
+        }
+    return None  
+
 def main():
     st.title("Stock Fundamentals with Key Levels by JC")
 
@@ -305,6 +346,37 @@ def main():
                 except Exception as e:
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
+                # Add analyst ratings
+                st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
+                try:
+                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    
+                    # Debug information
+                    st.write("Debug: Analyst Recommendations")
+                    st.write(stock.recommendations)
+                    
+                    st.write("Debug: Analyst Recommendations Summary")
+                    st.write(stock.recommendations_summary)
+                    
+                    # If the above debug info shows data, we can proceed to format and display it
+                    if not stock.recommendations_summary.empty:
+                        summary = stock.recommendations_summary.set_index('To Grade')['Count'].to_dict()
+                        
+                        st.subheader("Recommendation Summary")
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Buy", summary.get('Buy', 'N/A'))
+                        col2.metric("Hold", summary.get('Hold', 'N/A'))
+                        col3.metric("Sell", summary.get('Sell', 'N/A'))
+                    
+                    if not stock.recommendations.empty:
+                        st.subheader("Recent Analyst Recommendations")
+                        st.dataframe(stock.recommendations.tail())
+                    
+                    if stock.recommendations_summary.empty and stock.recommendations.empty:
+                        st.write("No analyst recommendations available.")
+                except Exception as e:
+                    st.error(f"Error fetching analyst ratings: {str(e)}")
+
                 # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -324,9 +396,30 @@ def main():
 
                 # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                
-                
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
+
+                # Add screenshot button
+                if st.button("Take Screenshot"):
+                    try:
+                        # Save the figure as a temporary file
+                        temp_file = f"{st.session_state.formatted_ticker}_chart.png"
+                        pio.write_image(fig, temp_file)
+                        
+                        # Read the file and create a download button
+                        with open(temp_file, "rb") as file:
+                            btn = st.download_button(
+                                label="Download Chart Screenshot",
+                                data=file,
+                                file_name=f"{st.session_state.formatted_ticker}_chart.png",
+                                mime="image/png"
+                            )
+                        
+                        # Remove the temporary file
+                        os.remove(temp_file)
+                        
+                    except Exception as e:
+                        st.error(f"Error generating screenshot: {str(e)}")
+                        st.error("If the error persists, please try updating plotly and kaleido: pip install -U plotly kaleido")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
