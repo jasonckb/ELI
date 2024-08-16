@@ -397,27 +397,21 @@ def main():
 
                     if not stock.recommendations.empty:
                         st.subheader("Recent Analyst Recommendations")
-                        recent_recommendations = stock.recommendations.tail().reset_index()
+                        recent_recommendations = stock.recommendations.sort_index(ascending=False).head(10)
                         
-                        # Check if 'Date' column exists, if not, create it from the index
-                        if 'Date' not in recent_recommendations.columns:
-                            recent_recommendations['Date'] = recent_recommendations.index
-
                         # Ensure 'Date' column is in datetime format
-                        recent_recommendations['Date'] = pd.to_datetime(recent_recommendations['Date'])
-                        recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
-
-                        # Define columns to display
-                        columns_to_display = ['Date', 'Firm', 'To Grade', 'From Grade', 'Action']
+                        recent_recommendations.index = pd.to_datetime(recent_recommendations.index)
                         
-                        # Filter columns that exist in the DataFrame
-                        existing_columns = [col for col in columns_to_display if col in recent_recommendations.columns]
+                        # Create a new DataFrame with the desired columns and format
+                        display_recommendations = pd.DataFrame({
+                            'Date': recent_recommendations.index.date,
+                            'Firm': recent_recommendations['Firm'],
+                            'To Grade': recent_recommendations['To Grade'],
+                            'From Grade': recent_recommendations['From Grade'],
+                            'Action': recent_recommendations.apply(lambda row: f"{row['From Grade']} → {row['To Grade']}" if row['From Grade'] != row['To Grade'] else "Reiterated", axis=1)
+                        })
                         
-                        if existing_columns:
-                            st.dataframe(recent_recommendations[existing_columns])
-                        else:
-                            st.write("No detailed recommendation data available.")
-                            st.write("Available columns:", recent_recommendations.columns)
+                        st.dataframe(display_recommendations)
                     
                     if stock.recommendations_summary.empty and stock.recommendations.empty:
                         st.write("No analyst recommendations available.")
