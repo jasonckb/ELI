@@ -360,9 +360,17 @@ def main():
                         categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
                         colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
 
+                        # Create a mapping for x-axis labels
+                        period_labels = {
+                            '0m': 'Current Month',
+                            '-1m': '1 Month Ago',
+                            '-2m': '2 Months Ago',
+                            '-3m': '3 Months Ago'
+                        }
+
                         for category, color in zip(categories, colors):
                             fig_summary.add_trace(go.Bar(
-                                x=summary.index,
+                                x=[period_labels.get(x, x) for x in summary.index],
                                 y=summary[category],
                                 name=category.capitalize(),
                                 marker_color=color
@@ -390,8 +398,17 @@ def main():
                     if not stock.recommendations.empty:
                         st.subheader("Recent Analyst Recommendations")
                         recent_recommendations = stock.recommendations.tail().reset_index()
-                        recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
-                        st.dataframe(recent_recommendations[['Date', 'Firm', 'To Grade', 'From Grade', 'Action']])
+                        if 'Date' in recent_recommendations.columns:
+                            recent_recommendations['Date'] = recent_recommendations['Date'].dt.date
+                            columns_to_display = ['Date', 'Firm', 'To Grade', 'From Grade', 'Action']
+                        else:
+                            columns_to_display = ['Firm', 'To Grade', 'From Grade', 'Action']
+                        
+                        try:
+                            st.dataframe(recent_recommendations[columns_to_display])
+                        except KeyError as e:
+                            st.error(f"Error displaying recent recommendations: {str(e)}")
+                            st.write("Available columns:", recent_recommendations.columns)
                     
                     if stock.recommendations_summary.empty and stock.recommendations.empty:
                         st.write("No analyst recommendations available.")
