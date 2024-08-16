@@ -394,17 +394,8 @@ def main():
                         col3.metric("Hold", latest['hold'])
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
-                    else:
-                        st.write("No recommendation summary available.")
 
-                    # Add debug information
-                    st.write("Debug information:")
-                    st.write(f"Recommendations summary shape: {stock.recommendations_summary.shape if hasattr(stock, 'recommendations_summary') else 'N/A'}")
-                    st.write(f"Recommendations shape: {stock.recommendations.shape if hasattr(stock, 'recommendations') else 'N/A'}")
-                    st.write("Available columns in recommendations:", stock.recommendations.columns.tolist() if hasattr(stock, 'recommendations') else 'N/A')
-                    st.write("First few rows of recommendations:")
-                    st.write(stock.recommendations.head() if hasattr(stock, 'recommendations') else 'N/A')
-
+                    
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
 
@@ -413,11 +404,8 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                try:
-                    fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error plotting stock chart: {str(e)}")
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
+                st.plotly_chart(fig, use_container_width=True)
 
                 # Display EMA values
                 st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
@@ -432,29 +420,7 @@ def main():
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
-                # Add screenshot button
-                if st.button("Take Screenshot"):
-                    try:
-                        # Save the figure as a temporary file
-                        temp_file = f"{st.session_state.formatted_ticker}_chart.png"
-                        pio.write_image(fig, temp_file)
-                        
-                        # Read the file and create a download button
-                        with open(temp_file, "rb") as file:
-                            btn = st.download_button(
-                                label="Download Chart Screenshot",
-                                data=file,
-                                file_name=f"{st.session_state.formatted_ticker}_chart.png",
-                                mime="image/png"
-                            )
-                        
-                        # Remove the temporary file
-                        os.remove(temp_file)
-                        
-                    except Exception as e:
-                        st.error(f"Error generating screenshot: {str(e)}")
-                        st.error("If the error persists, please try updating plotly and kaleido: pip install -U plotly kaleido")
-
+                
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.write("Debug information:")
