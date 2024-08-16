@@ -274,15 +274,19 @@ def get_analyst_recommendations(ticker):
     recommendations = stock.recommendations
     if recommendations is not None and not recommendations.empty:
         recent_recommendations = recommendations.tail(10)  # Get last 10 recommendations
+        
+        # Upgrades and downgrades can be separated if needed
         upgrades = recent_recommendations[recent_recommendations['To Grade'] > recent_recommendations['From Grade']]
         downgrades = recent_recommendations[recent_recommendations['To Grade'] < recent_recommendations['From Grade']]
         
+        # Latest summary (for display)
         latest_recommendations = recommendations.iloc[-1]
         buy_count = latest_recommendations.get('Buy', 0)
         hold_count = latest_recommendations.get('Hold', 0)
         sell_count = latest_recommendations.get('Sell', 0)
         
         return {
+            'recent_recommendations': recent_recommendations,
             'upgrades': upgrades,
             'downgrades': downgrades,
             'summary': {
@@ -291,7 +295,8 @@ def get_analyst_recommendations(ticker):
                 'Sell': sell_count
             }
         }
-    return None  
+    return None
+
 
 def main():
     st.title("Stock Fundamentals with Key Levels by JC")
@@ -309,9 +314,6 @@ def main():
         # Add a refresh button
         refresh = st.button("Refresh Data")
 
-        # Display current price and calculated levels with larger text in the sidebar
-        st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
-
     # Format ticker and fetch data when input changes or refresh is clicked
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
         st.session_state.formatted_ticker = format_ticker(ticker)
@@ -327,80 +329,29 @@ def main():
             current_price = st.session_state.data['Close'].iloc[-1]
             strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
 
-            # Display current price and calculated levels in the sidebar
-            with col1:
-                st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p>Strike Price ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
-
             # Main chart and data display
             with col2:
-                # Add financial metrics above the chart
-                st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
-                try:
-                    metrics = get_financial_metrics(st.session_state.formatted_ticker)
-                    cols = st.columns(2)  # Create 2 columns for metrics display
-                    for i, (key, value) in enumerate(metrics.items()):
-                        cols[i % 2].markdown(f"<b>{key}:</b> {value}", unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Error fetching financial metrics: {str(e)}")
-
-                # Add analyst ratings
+                # Display analyst ratings and recommendations
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
                 try:
-                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    recommendations_data = get_analyst_recommendations(st.session_state.formatted_ticker)
                     
-                    if not stock.recommendations_summary.empty:
+                    if recommendations_data:
+                        st.subheader("Recent Analyst Recommendations")
+                        
+                        # Display the recent recommendations in a table
+                        st.write(recommendations_data['recent_recommendations'])
+
+                        # Display the latest summary metrics
                         st.subheader("Recommendation Summary")
-                        summary = stock.recommendations_summary.set_index('period')
-
-                        # Create a bar chart for the summary
-                        fig_summary = go.Figure()
-                        categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
-                        colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
-
-                        # Create a mapping for x-axis labels
-                        period_labels = {
-                            '0m': 'Current Month',
-                            '-1m': '1 Month Ago',
-                            '-2m': '2 Months Ago',
-                            '-3m': '3 Months Ago'
-                        }
-
-                        for category, color in zip(categories, colors):
-                            fig_summary.add_trace(go.Bar(
-                                x=[period_labels.get(x, x) for x in summary.index],
-                                y=summary[category],
-                                name=category.capitalize(),
-                                marker_color=color
-                            ))
-
-                        fig_summary.update_layout(
-                            barmode='stack',
-                            title="Analyst Recommendations Over Time",
-                            xaxis_title="Period",
-                            yaxis_title="Number of Recommendations",
-                            legend_title="Recommendation Type"
-                        )
-
-                        st.plotly_chart(fig_summary, use_container_width=True)
-
-                        # Display the latest recommendations
-                        latest = summary.iloc[0]
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        col1.metric("Strong Buy", latest['strongBuy'])
-                        col2.metric("Buy", latest['buy'])
-                        col3.metric("Hold", latest['hold'])
-                        col4.metric("Sell", latest['sell'])
-                        col5.metric("Strong Sell", latest['strongSell'])
-
+                        latest_summary = recommendations_data['summary']
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Buy", latest_summary['Buy'])
+                        col2.metric("Hold", latest_summary['Hold'])
+                        col3.metric("Sell", latest_summary['Sell'])
                     
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
-
-                # Add some space between metrics and chart
-                st.markdown("<br>", unsafe_allow_html=True)
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
@@ -415,11 +366,6 @@ def main():
                 st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
-
-                # Display news
-                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
-
                 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
