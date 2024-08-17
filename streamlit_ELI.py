@@ -310,7 +310,7 @@ def main():
                                 yaxis_title="Number of Recommendations",
                                 legend_title="Recommendation Type",
                                 height=400,
-                                margin=dict(l=50, r=50, t=50, b=100)
+                                margin=dict(l=50, r=50, t=50, b=70)
                             )
 
                             st.plotly_chart(fig_summary, use_container_width=True)
@@ -348,7 +348,7 @@ def main():
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
                                 height=500,  # Increased height to accommodate footnote
-                                margin=dict(l=50, r=50, t=50, b=30),  # Increased bottom margin
+                                margin=dict(l=50, r=50, t=50, b=70),  # Increased bottom margin
                             )
 
                             # Add explanatory text below the chart
