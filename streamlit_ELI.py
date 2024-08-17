@@ -372,10 +372,6 @@ def main():
                                 borderwidth=1,
                                 borderpad=10,
                                 bgcolor="white",
-                                box=dict(
-                                    boxstyle="round",
-                                    pad=5
-                                )
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
