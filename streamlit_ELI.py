@@ -272,7 +272,7 @@ def get_financial_data(ticker):
 
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     # Cost of Equity
-    cost_of_equity = risk_free_rate + beta * market_risk_premium
+    cost_of_equity = risk_free_rate/100 + beta * market_risk_premium/100
     
     # Cost of Debt
     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
@@ -293,7 +293,7 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     weight_of_equity = financials['total_equity'] / total_capital
     
     # WACC
-    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate/100))
     
     return wacc
 
