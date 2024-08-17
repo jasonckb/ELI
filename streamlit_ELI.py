@@ -654,8 +654,8 @@ def main():
                         
                         st.plotly_chart(fig)
                     # Calculate and display upside/downside
-                    upside = (fair_value / current_price - 1) * 100
-                    st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
+                    #upside = (fair_value / current_price - 1) * 100
+                    #st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
                     
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
