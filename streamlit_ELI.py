@@ -515,27 +515,29 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-                    
+        
                     # Calculate WACC and growth rates
-                    wacc = calculate_wacc(financials, risk_free_rate, market_risk_premium)
+                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium, st.session_state.formatted_ticker)
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
-                    
+        
                     # Perform DCF Valuation
-                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period)
-                    
+                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period)
+        
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-                    
+        
                     # Calculate and display upside/downside
                     upside = (fair_value / current_price - 1) * 100
                     st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
-                    
+        
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
-
+                    st.write("Debug information:")
+                    st.write(f"Financials: {financials}")
+                    
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
