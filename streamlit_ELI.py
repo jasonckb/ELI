@@ -265,7 +265,7 @@ def get_financial_data(ticker):
         financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
 
     # Additional info
-    financials['shares_outstanding'] = stock.info.get('Common Stock')
+    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
     financials['market_cap'] = stock.info.get('marketCap')
     
     return financials
