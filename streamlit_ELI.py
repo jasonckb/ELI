@@ -601,12 +601,13 @@ def main():
                         })
                         
                         diff = fair_value - current_price
-                        diff_percentage = ( current_price/ fair_value  - 1) * 100
+                        dis_percentage = ( 1 - current_price/ fair_value) * 100
+                        pre_percentage = ( current_price/ fair_value - 1) * 100
                         if diff > 0:
-                            diff_label = f"Discount: {diff_percentage:.1f}%"
+                            diff_label = f"Discount: {dis_percentage :.1f}%"
                             color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
                         else:
-                            diff_label = f"Premium: {abs(diff_percentage):.1f}%"
+                            diff_label = f"Premium: {abs(pre_percentage):.1f}%"
                             color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
                         
                         fig = go.Figure()
