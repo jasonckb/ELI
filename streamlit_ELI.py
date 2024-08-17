@@ -432,7 +432,6 @@ def main():
 
                             st.plotly_chart(fig_summary, use_container_width=True)
 
-                             
                         with col2:
                             price_targets = stock.info
                             current_price = price_targets.get('currentPrice', 0)
@@ -446,7 +445,7 @@ def main():
                                 mode="number+gauge+delta",
                                 value=current_price,
                                 delta={'reference': target_mean, 'position': "top"},
-                                domain={'x': [0, 1], 'y': [0.25, 1]},  # Adjusted to make room for footnote
+                                domain={'x': [0, 1], 'y': [0.25, 1]},
                                 title={'text': "Price Target"},
                                 gauge={
                                     'axis': {'range': [None, target_high], 'tickwidth': 1},
@@ -465,19 +464,18 @@ def main():
 
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
-                                height=500,  # Increased height to accommodate footnote
-                                margin=dict(l=50, r=50, t=50, b=70),  # Increased bottom margin
+                                height=500,
+                                margin=dict(l=50, r=50, t=50, b=70),
                             )
 
-                            # Add explanatory text below the chart
                             annotation_text = (
                                 f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
                                 f"Green Line: Average target @ ${target_mean:.2f}<br>"
                                 f"Gray Bar: Current price  @ ${current_price:.2f}"
                             )
                             fig_targets.add_annotation(
-                                x=0.5,  # Centered horizontally
-                                y=0,    # At the bottom of the chart
+                                x=0.5,
+                                y=0,
                                 xref="paper",
                                 yref="paper",
                                 text=annotation_text,
@@ -494,8 +492,7 @@ def main():
 
                             st.plotly_chart(fig_targets, use_container_width=True)
 
-                        # Display the latest recommendations with increased spacing
-                        st.markdown("<br>", unsafe_allow_html=True)  # Add extra space
+                        st.markdown("<br>", unsafe_allow_html=True)
                         latest = summary.iloc[0]
                         col1, col2, col3, col4, col5 = st.columns(5)
                         col1.metric("Strong Buy", latest['strongBuy'])
@@ -503,7 +500,7 @@ def main():
                         col3.metric("Hold", latest['hold'])
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
-                        st.markdown("<br>", unsafe_allow_html=True)  # Add extra space
+                        st.markdown("<br>", unsafe_allow_html=True)
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
@@ -515,29 +512,29 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-        
+                    
                     # Calculate WACC and growth rates
                     wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium, st.session_state.formatted_ticker)
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
-        
+                    
                     # Perform DCF Valuation
-                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period)
-        
+                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, st.session_state.formatted_ticker)
+                    
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-        
+                    
                     # Calculate and display upside/downside
                     upside = (fair_value / current_price - 1) * 100
                     st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
-        
+                    
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     st.write("Debug information:")
                     st.write(f"Financials: {financials}")
-                    
+
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
