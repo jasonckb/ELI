@@ -627,7 +627,7 @@ def main():
                         
                         fig.update_layout(
                             title=f"Price Comparison<br><sub>{diff_label}</sub>",
-                            xaxis_title="Price ($)",
+                            xaxis_title="",
                             yaxis_title="",
                             height=300,
                             width=400,
