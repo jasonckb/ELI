@@ -310,7 +310,7 @@ def calculate_fcf_growth_rate(financials):
         # If 3-year data is not available, use a default growth rate or estimate from other metrics
         return 0.05  # 5% default growth rate
 
-def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period):
+def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period, current_price):
     fcf = financials['fcf_latest']
     pv_fcf = 0
     
@@ -329,11 +329,11 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     # Equity Value
     equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
     
-    # Shares outstanding
-    shares_outstanding = yf.Ticker(financials.get('ticker', '')).info.get('sharesOutstanding', 1)
+    # Estimate shares outstanding based on market cap and current price
+    estimated_shares_outstanding = financials.get('market_cap', current_price * 1e6) / current_price
     
     # Fair value per share
-    fair_value = equity_value / shares_outstanding
+    fair_value = equity_value / estimated_shares_outstanding
     
     return fair_value
 
@@ -518,7 +518,7 @@ def main():
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
                     
                     # Perform DCF Valuation
-                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period)
+                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, current_price)
                     
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
