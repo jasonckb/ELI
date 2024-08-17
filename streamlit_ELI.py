@@ -241,37 +241,65 @@ def get_financial_data(ticker):
     
     # Balance sheet data
     balance_sheet = stock.balance_sheet
-    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0]
-    financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
+    
+    # Try to get Total Stockholder Equity, if not available, calculate it
+    if 'Total Stockholder Equity' in balance_sheet.index:
+        financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+    else:
+        total_assets = balance_sheet.loc['Total Assets'].iloc[0] if 'Total Assets' in balance_sheet.index else 0
+        total_liabilities = balance_sheet.loc['Total Liabilities Net Minority Interest'].iloc[0] if 'Total Liabilities Net Minority Interest' in balance_sheet.index else 0
+        financials['total_equity'] = total_assets - total_liabilities
     
     # Income statement data
     income_stmt = stock.financials
-    financials['interest_expense'] = income_stmt.loc['Interest Expense'].iloc[0]
-    financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0]
-    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0]
+    financials['interest_expense'] = income_stmt.loc['Interest Expense'].iloc[0] if 'Interest Expense' in income_stmt.index else 0
+    financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0] if 'Income Tax Expense' in income_stmt.index else 0
+    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
     
     # Cash flow statement data
     cash_flow = stock.cashflow
-    financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-    financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+    if 'Free Cash Flow' in cash_flow.index:
+        financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
+        financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+    else:
+        # If Free Cash Flow is not available, calculate it
+        operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
+        capital_expenditures = cash_flow.loc['Capital Expenditure'].iloc[0] if 'Capital Expenditure' in cash_flow.index else 0
+        financials['fcf_latest'] = operating_cash_flow - capital_expenditures
+        financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
+
+    # Add cash to financials
+    financials['cash'] = balance_sheet.loc['Cash'].iloc[0] if 'Cash' in balance_sheet.index else 0
     
     return financials
 
-def calculate_wacc(financials, risk_free_rate, market_risk_premium):
+def calculate_wacc(financials, risk_free_rate, market_risk_premium, ticker):
     total_capital = financials['total_debt'] + financials['total_equity']
     
     # Cost of Debt
-    interest_rate = financials['interest_expense'] / financials['total_debt']
-    tax_rate = financials['income_tax'] / financials['net_income']
+    if financials['total_debt'] != 0:
+        interest_rate = financials['interest_expense'] / financials['total_debt']
+    else:
+        interest_rate = 0
+    
+    if financials['net_income'] != 0:
+        tax_rate = financials['income_tax'] / financials['net_income']
+    else:
+        tax_rate = 0.21  # Assume a default corporate tax rate of 21%
+    
     cost_of_debt = interest_rate * (1 - tax_rate)
     
     # Cost of Equity (using CAPM)
-    beta = yf.Ticker(ticker).info['beta']
-    cost_of_equity = risk_free_rate + beta * market_risk_premium
+    beta = yf.Ticker(ticker).info.get('beta', 1)  # Default to 1 if beta is not available
+    cost_of_equity = risk_free_rate + beta * (market_risk_premium / 100)
     
     # WACC
-    wacc = (financials['total_debt'] / total_capital) * cost_of_debt + \
-           (financials['total_equity'] / total_capital) * cost_of_equity
+    if total_capital != 0:
+        wacc = (financials['total_debt'] / total_capital) * cost_of_debt + \
+               (financials['total_equity'] / total_capital) * cost_of_equity
+    else:
+        wacc = cost_of_equity  # If total capital is 0, assume it's all equity
     
     return wacc
 
