@@ -250,6 +250,7 @@ def get_financial_data(ticker):
     financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
     financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0] if 'Income Tax Expense' in income_stmt.index else 0
     financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
+    financials['pre_tax_income'] = income_stmt.loc['Income Before Tax'].iloc[0] if 'Income Before Tax' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
     
     # Cash flow statement data
     cash_flow = stock.cashflow
@@ -280,8 +281,9 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
         cost_of_debt = risk_free_rate
     
     # Tax Rate
-    if financials['net_income'] != 0:
-        tax_rate = financials['income_tax'] / financials['net_income']
+    pre_tax_income = financials.get('pre_tax_income', financials['net_income'] + financials['income_tax'])
+    if pre_tax_income != 0:
+        tax_rate = financials['income_tax'] / pre_tax_income
     else:
         tax_rate = 0.30  # Assume a default tax rate of 30%
     
