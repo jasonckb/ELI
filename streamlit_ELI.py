@@ -242,18 +242,12 @@ def get_financial_data(ticker):
     # Balance sheet data
     balance_sheet = stock.balance_sheet
     financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    
-    # Try to get Total Stockholder Equity, if not available, calculate it
-    if 'Total Stockholder Equity' in balance_sheet.index:
-        financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
-    else:
-        total_assets = balance_sheet.loc['Total Assets'].iloc[0] if 'Total Assets' in balance_sheet.index else 0
-        total_liabilities = balance_sheet.loc['Total Liabilities Net Minority Interest'].iloc[0] if 'Total Liabilities Net Minority Interest' in balance_sheet.index else 0
-        financials['total_equity'] = total_assets - total_liabilities
+    financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0] if 'Total Stockholder Equity' in balance_sheet.index else 0
+    financials['cash'] = balance_sheet.loc['Cash'].iloc[0] if 'Cash' in balance_sheet.index else 0
     
     # Income statement data
     income_stmt = stock.financials
-    financials['interest_expense'] = income_stmt.loc['Interest Expense'].iloc[0] if 'Interest Expense' in income_stmt.index else 0
+    financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
     financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0] if 'Income Tax Expense' in income_stmt.index else 0
     financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
     
@@ -265,12 +259,13 @@ def get_financial_data(ticker):
     else:
         # If Free Cash Flow is not available, calculate it
         operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-        capital_expenditures = cash_flow.loc['Capital Expenditure'].iloc[0] if 'Capital Expenditure' in cash_flow.index else 0
+        capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
         financials['fcf_latest'] = operating_cash_flow - capital_expenditures
         financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
 
-    # Add cash to financials
-    financials['cash'] = balance_sheet.loc['Cash'].iloc[0] if 'Cash' in balance_sheet.index else 0
+    # Additional info
+    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
+    financials['market_cap'] = stock.info.get('marketCap')
     
     return financials
 
@@ -278,26 +273,27 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, ticker):
     total_capital = financials['total_debt'] + financials['total_equity']
     
     # Cost of Debt
-    if financials['total_debt'] != 0:
-        interest_rate = financials['interest_expense'] / financials['total_debt']
+    if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
+        cost_of_debt = financials['interest_expense'] / financials['total_debt']
     else:
-        interest_rate = 0
+        cost_of_debt = risk_free_rate  # Assume cost of debt is risk-free rate if we can't calculate it
     
     if financials['net_income'] != 0:
         tax_rate = financials['income_tax'] / financials['net_income']
     else:
         tax_rate = 0.21  # Assume a default corporate tax rate of 21%
     
-    cost_of_debt = interest_rate * (1 - tax_rate)
+    after_tax_cost_of_debt = cost_of_debt * (1 - tax_rate)
     
     # Cost of Equity (using CAPM)
     beta = yf.Ticker(ticker).info.get('beta', 1)  # Default to 1 if beta is not available
-    cost_of_equity = risk_free_rate + beta * (market_risk_premium / 100)
+    cost_of_equity = risk_free_rate + beta * market_risk_premium
     
     # WACC
     if total_capital != 0:
-        wacc = (financials['total_debt'] / total_capital) * cost_of_debt + \
-               (financials['total_equity'] / total_capital) * cost_of_equity
+        weight_of_debt = financials['total_debt'] / total_capital
+        weight_of_equity = financials['total_equity'] / total_capital
+        wacc = (weight_of_debt * after_tax_cost_of_debt) + (weight_of_equity * cost_of_equity)
     else:
         wacc = cost_of_equity  # If total capital is 0, assume it's all equity
     
@@ -330,10 +326,13 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
     
     # Estimate shares outstanding based on market cap and current price
-    estimated_shares_outstanding = financials.get('market_cap', current_price * 1e6) / current_price
+    if 'shares_outstanding' in financials:
+        shares_outstanding = financials['shares_outstanding']
+    else:
+        shares_outstanding = financials.get('market_cap', current_price * 1e9) / current_price
     
     # Fair value per share
-    fair_value = equity_value / estimated_shares_outstanding
+    fair_value = equity_value / shares_outstanding
     
     return fair_value
 
@@ -512,24 +511,24 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-                    
+        
                     # Calculate WACC and growth rates
-                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium, st.session_state.formatted_ticker)
+                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium/100, st.session_state.formatted_ticker)
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
-                    
+        
                     # Perform DCF Valuation
                     fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, current_price)
-                    
+        
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-                    
+        
                     # Calculate and display upside/downside
                     upside = (fair_value / current_price - 1) * 100
                     st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
-                    
+        
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     st.write("Debug information:")
