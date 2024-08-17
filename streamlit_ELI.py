@@ -310,7 +310,7 @@ def main():
                                 yaxis_title="Number of Recommendations",
                                 legend_title="Recommendation Type",
                                 height=400,
-                                margin=dict(l=50, r=50, t=50, b=50)
+                                margin=dict(l=50, r=50, t=50, b=30)
                             )
 
                             st.plotly_chart(fig_summary, use_container_width=True)
@@ -332,13 +332,13 @@ def main():
                                 title={'text': "Price Target"},
                                 gauge={
                                     'axis': {'range': [None, target_high], 'tickwidth': 1},
-                                    'bar': {'color': "darkblue"},
+                                    'bar': {'color': "darkgray"},
                                     'steps': [
                                         {'range': [0, target_low], 'color': "red"},
                                         {'range': [target_low, target_high], 'color': "lightgreen"}
                                     ],
                                     'threshold': {
-                                        'line': {'color': "red", 'width': 4},
+                                        'line': {'color': "darkgreen", 'width': 4},
                                         'thickness': 0.75,
                                         'value': target_mean
                                     }
@@ -353,9 +353,9 @@ def main():
 
                             # Add explanatory text below the chart
                             annotation_text = (
-                                f"Green zone: Price target range ${target_low:.2f} to ${target_high:.2f}<br>"
-                                f"Red line: Average target ${target_mean:.2f}<br>"
-                                f"Blue bar: Current price ${current_price:.2f}"
+                                f"Green zone: Target range ${target_low:.2f} to ${target_high:.2f}<br>"
+                                f"Green line: Average target @ ${target_mean:.2f}<br>"
+                                f"Gray bar: Current price  @ ${current_price:.2f}"
                             )
                             fig_targets.add_annotation(
                                 x=0.5,  # Centered horizontally
