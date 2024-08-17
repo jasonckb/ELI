@@ -408,7 +408,9 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price, strike_name, knockout_name)
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
+                                       strike_price, airbag_price, knockout_price, 
+                                       strike_name, knockout_name)
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Display EMA values
