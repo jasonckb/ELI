@@ -378,7 +378,7 @@ def main():
                             st.plotly_chart(fig_targets, use_container_width=True)
 
                         # Display the latest recommendations with increased spacing
-                        st.markdown("<br>", unsafe_allow_html=True)  # Add extra space
+                        st.markdown("<br>", unsafe_allow_html=False)  # Add extra space
                         latest = summary.iloc[0]
                         col1, col2, col3, col4, col5 = st.columns(5)
                         col1.metric("Strong Buy", latest['strongBuy'])
