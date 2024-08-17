@@ -348,14 +348,14 @@ def main():
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
                                 height=500,  # Increased height to accommodate footnote
-                                margin=dict(l=50, r=50, t=50, b=150),  # Increased bottom margin
+                                margin=dict(l=50, r=50, t=50, b=30),  # Increased bottom margin
                             )
 
                             # Add explanatory text below the chart
                             annotation_text = (
-                                f"Green zone: Target range ${target_low:.2f} to ${target_high:.2f}<br>"
-                                f"Green line: Average target @ ${target_mean:.2f}<br>"
-                                f"Gray bar: Current price  @ ${current_price:.2f}"
+                                f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
+                                f"Green Line: Average target @ ${target_mean:.2f}<br>"
+                                f"Gray Bar: Current price  @ ${current_price:.2f}"
                             )
                             fig_targets.add_annotation(
                                 x=0.5,  # Centered horizontally
