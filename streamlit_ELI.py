@@ -327,10 +327,10 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     enterprise_value = pv_fcf + pv_terminal_value
     
     # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials['cash']
+    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
     
     # Shares outstanding
-    shares_outstanding = yf.Ticker(ticker).info['sharesOutstanding']
+    shares_outstanding = yf.Ticker(financials.get('ticker', '')).info.get('sharesOutstanding', 1)
     
     # Fair value per share
     fair_value = equity_value / shares_outstanding
@@ -518,7 +518,7 @@ def main():
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
                     
                     # Perform DCF Valuation
-                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, st.session_state.formatted_ticker)
+                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period)
                     
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
