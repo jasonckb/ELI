@@ -250,7 +250,7 @@ def get_financial_data(ticker):
     financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
     financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0] if 'Income Tax Expense' in income_stmt.index else 0
     financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['pre_tax_income'] = income_stmt.loc['Income Before Tax'].iloc[0] if 'Income Before Tax' in income_stmt.index else 0
+    financials['pre_tax_income'] = income_stmt.loc['Income Before Tax'].iloc[0] if 'Income Before Tax' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
     
     # Cash flow statement data
     cash_flow = stock.cashflow
@@ -507,27 +507,34 @@ def main():
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
                     
-                    # WACC Calculation
+                    # Display raw financial data
+                    st.subheader("Raw Financial Data:")
+                    for key, value in financials.items():
+                        st.write(f"{key}: {value}")
+                    
+                    # Calculate and display WACC components
+                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
                     st.subheader("WACC Calculation:")
                     st.write(f"Risk-free rate: {risk_free_rate:.2%}")
                     st.write(f"Market risk premium: {market_risk_premium:.2%}")
                     st.write(f"Beta: {beta:.2f}")
-
+                    
                     cost_of_equity = risk_free_rate/100 + beta * (market_risk_premium/100)
                     st.write(f"Cost of Equity: {cost_of_equity:.2%}")
-
+                    
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
                         cost_of_debt = financials['interest_expense'] / financials['total_debt']
                     else:
                         cost_of_debt = risk_free_rate/100
                     st.write(f"Cost of Debt: {cost_of_debt:.2%}")
-
+                    
                     if financials['pre_tax_income'] != 0:
                         tax_rate = financials['income_tax'] / financials['pre_tax_income']
                     else:
                         tax_rate = 0.21  # Assume a default corporate tax rate of 21%
                     st.write(f"Tax Rate: {tax_rate:.2%}")
-
+                    
                     total_capital = financials['total_debt'] + financials['total_equity']
                     if total_capital != 0:
                         weight_of_debt = financials['total_debt'] / total_capital
@@ -537,7 +544,7 @@ def main():
                         weight_of_equity = 1
                     st.write(f"Weight of Debt: {weight_of_debt:.2%}")
                     st.write(f"Weight of Equity: {weight_of_equity:.2%}")
-
+                    
                     wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
                     st.write(f"WACC: {wacc:.2%}")
                     
