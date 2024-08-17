@@ -346,12 +346,7 @@ def main():
         knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
         strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
-        st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
-        st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-        st.markdown(f"<p>{knockout_name} ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
-        
+                
         
         # DCF Model Inputs
         st.markdown("### DCF Model Inputs")
