@@ -609,17 +609,21 @@ def main():
                             color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
                         
                         fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=df['Price'],
-                            y=df['Type'],
-                            orientation='h',
-                            marker_color=color_scheme,
-                            text=df['Price'].apply(lambda x: f'${x:.2f}'),
-                            textposition='outside'
-                        ))
                         
                         # Calculate the maximum x-axis value to ensure full visibility
                         max_x = max(fair_value, current_price) * 1.1  # Add 10% padding
+                        
+                        for i, row in df.iterrows():
+                            fig.add_trace(go.Bar(
+                                x=[row['Price']],
+                                y=[row['Type']],
+                                orientation='h',
+                                marker_color=color_scheme[i],
+                                text=[f"${row['Price']:.2f}"],
+                                textposition='auto',
+                                insidetextanchor='middle',
+                                textfont=dict(color='white' if row['Price'] / max_x > 0.3 else 'black')
+                            ))
                         
                         fig.update_layout(
                             title=f"Price Comparison<br><sub>{diff_label}</sub>",
@@ -627,21 +631,24 @@ def main():
                             yaxis_title="",
                             height=300,
                             width=400,
-                            margin=dict(l=0, r=100, t=40, b=0),  # Increased right margin for labels
-                            xaxis=dict(range=[0, max_x]),  # Set x-axis range
+                            margin=dict(l=0, r=50, t=40, b=0),
+                            xaxis=dict(range=[0, max_x]),
+                            barmode='group',
+                            uniformtext=dict(mode='hide', minsize=8),
                         )
                         
-                        # Add value labels to the end of each bar
+                        # Add value labels to the end of each bar if not visible inside
                         for i, row in df.iterrows():
-                            fig.add_annotation(
-                                x=row['Price'],
-                                y=row['Type'],
-                                text=f"${row['Price']:.2f}",
-                                showarrow=False,
-                                xanchor='left',
-                                xshift=5,
-                                font=dict(color='black')
-                            )
+                            if row['Price'] / max_x <= 0.3:
+                                fig.add_annotation(
+                                    x=row['Price'],
+                                    y=row['Type'],
+                                    text=f"${row['Price']:.2f}",
+                                    showarrow=False,
+                                    xanchor='left',
+                                    xshift=5,
+                                    font=dict(color='black')
+                                )
                         
                         st.plotly_chart(fig)
                     # Calculate and display upside/downside
