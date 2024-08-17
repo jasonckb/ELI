@@ -269,33 +269,29 @@ def get_financial_data(ticker):
     
     return financials
 
-def calculate_wacc(financials, risk_free_rate, market_risk_premium, ticker):
-    total_capital = financials['total_debt'] + financials['total_equity']
+def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
+    # Cost of Equity
+    cost_of_equity = risk_free_rate + beta * market_risk_premium
     
     # Cost of Debt
     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
         cost_of_debt = financials['interest_expense'] / financials['total_debt']
     else:
-        cost_of_debt = risk_free_rate  # Assume cost of debt is risk-free rate if we can't calculate it
+        cost_of_debt = risk_free_rate
     
+    # Tax Rate
     if financials['net_income'] != 0:
         tax_rate = financials['income_tax'] / financials['net_income']
     else:
-        tax_rate = 0.21  # Assume a default corporate tax rate of 21%
+        tax_rate = 0.30  # Assume a default tax rate of 30%
     
-    after_tax_cost_of_debt = cost_of_debt * (1 - tax_rate)
-    
-    # Cost of Equity (using CAPM)
-    beta = yf.Ticker(ticker).info.get('beta', 1)  # Default to 1 if beta is not available
-    cost_of_equity = risk_free_rate + beta * market_risk_premium
+    # Weights
+    total_capital = financials['total_debt'] + financials['total_equity']
+    weight_of_debt = financials['total_debt'] / total_capital
+    weight_of_equity = financials['total_equity'] / total_capital
     
     # WACC
-    if total_capital != 0:
-        weight_of_debt = financials['total_debt'] / total_capital
-        weight_of_equity = financials['total_equity'] / total_capital
-        wacc = (weight_of_debt * after_tax_cost_of_debt) + (weight_of_equity * cost_of_equity)
-    else:
-        wacc = cost_of_equity  # If total capital is 0, assume it's all equity
+    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
     
     return wacc
 
@@ -325,11 +321,8 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     # Equity Value
     equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
     
-    # Estimate shares outstanding based on market cap and current price
-    if 'shares_outstanding' in financials:
-        shares_outstanding = financials['shares_outstanding']
-    else:
-        shares_outstanding = financials.get('market_cap', current_price * 1e9) / current_price
+    # Shares outstanding
+    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)
     
     # Fair value per share
     fair_value = equity_value / shares_outstanding
@@ -511,24 +504,25 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-        
+                    
                     # Calculate WACC and growth rates
-                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium/100, st.session_state.formatted_ticker)
+                    beta = stock.info.get('beta', 1)
+                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium/100, beta)
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
-        
+                    
                     # Perform DCF Valuation
                     fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, current_price)
-        
+                    
                     # Display results
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-        
+                    
                     # Calculate and display upside/downside
                     upside = (fair_value / current_price - 1) * 100
                     st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
-        
+                    
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     st.write("Debug information:")
