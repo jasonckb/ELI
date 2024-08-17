@@ -346,15 +346,7 @@ def main():
         knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
         strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
-                
-        
-        # DCF Model Inputs
-        st.markdown("### DCF Model Inputs")
-        market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
-        terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
-        risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
-        high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
-        
+               
         refresh = st.button("Refresh Data")
 
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
