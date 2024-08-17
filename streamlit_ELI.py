@@ -519,7 +519,7 @@ def main():
                     st.write(f"Market risk premium: {market_risk_premium:.2%}")
                     st.write(f"Beta: {beta:.2f}")
                     
-                    cost_of_equity = risk_free_rate/100 + beta * (market_risk_premium/100)
+                    cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
                     st.write(f"Cost of Equity: {cost_of_equity:.2%}")
                     
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
