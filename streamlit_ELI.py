@@ -501,6 +501,7 @@ def main():
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 # New section for DCF Model
+
                 st.markdown("<h3>Fair Value Calculation by Discounted Cash Flow (DCF) Valuation:</h3>", unsafe_allow_html=True)
                 try:
                     # Fetch required financial data
@@ -510,12 +511,12 @@ def main():
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
                     
-                    cost_of_equity = risk_free_rate/100 + beta * (market_risk_premium/100)
+                    cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
                     
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
                         cost_of_debt = financials['interest_expense'] / financials['total_debt']
                     else:
-                        cost_of_debt = risk_free_rate/100
+                        cost_of_debt = risk_free_rate
                     
                     if financials['pre_tax_income'] != 0:
                         tax_rate = financials['income_tax'] / financials['pre_tax_income']
@@ -546,6 +547,8 @@ def main():
                         st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
                     
                     with col2:
                         # Create a DataFrame for the price comparison
