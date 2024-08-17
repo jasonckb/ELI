@@ -284,99 +284,99 @@ def main():
                 except Exception as e:
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
-                 # Add analyst ratings
-    st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
-    try:
-        stock = yf.Ticker(st.session_state.formatted_ticker)
-        
-        if not stock.recommendations_summary.empty:
-            st.subheader("Recommendation Summary")
-            summary = stock.recommendations_summary.set_index('period')
+                # Add analyst ratings
+                st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
+                try:
+                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    
+                    if not stock.recommendations_summary.empty:
+                        st.subheader("Recommendation Summary")
+                        summary = stock.recommendations_summary.set_index('period')
 
-            # Create two columns for the charts
-            col1, col2 = st.columns(2)
+                        # Create two columns for the charts
+                        col1, col2 = st.columns(2)
 
-            with col1:
-                # Create a bar chart for the recommendation summary
-                fig_summary = go.Figure()
-                categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
-                colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
+                        with col1:
+                            # Create a bar chart for the recommendation summary
+                            fig_summary = go.Figure()
+                            categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
+                            colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
 
-                period_labels = {
-                    '0m': 'Current Month',
-                    '-1m': '1 Month Ago',
-                    '-2m': '2 Months Ago',
-                    '-3m': '3 Months Ago'
-                }
+                            period_labels = {
+                                '0m': 'Current Month',
+                                '-1m': '1 Month Ago',
+                                '-2m': '2 Months Ago',
+                                '-3m': '3 Months Ago'
+                            }
 
-                for category, color in zip(categories, colors):
-                    fig_summary.add_trace(go.Bar(
-                        x=[period_labels.get(x, x) for x in summary.index],
-                        y=summary[category],
-                        name=category.capitalize(),
-                        marker_color=color
-                    ))
+                            for category, color in zip(categories, colors):
+                                fig_summary.add_trace(go.Bar(
+                                    x=[period_labels.get(x, x) for x in summary.index],
+                                    y=summary[category],
+                                    name=category.capitalize(),
+                                    marker_color=color
+                                ))
 
-                fig_summary.update_layout(
-                    barmode='stack',
-                    title="Analyst Recommendations Over Time",
-                    xaxis_title="Period",
-                    yaxis_title="Number of Recommendations",
-                    legend_title="Recommendation Type",
-                    height=400  # Adjust height as needed
-                )
+                            fig_summary.update_layout(
+                                barmode='stack',
+                                title="Analyst Recommendations Over Time",
+                                xaxis_title="Period",
+                                yaxis_title="Number of Recommendations",
+                                legend_title="Recommendation Type",
+                                height=400  # Adjust height as needed
+                            )
 
-                st.plotly_chart(fig_summary, use_container_width=True)
+                            st.plotly_chart(fig_summary, use_container_width=True)
 
-            with col2:
-                # Create a price target chart
-                price_targets = stock.info
-                current_price = price_targets.get('currentPrice', 0)
-                target_low = price_targets.get('targetLowPrice', 0)
-                target_mean = price_targets.get('targetMeanPrice', 0)
-                target_high = price_targets.get('targetHighPrice', 0)
+                        with col2:
+                            # Create a price target chart
+                            price_targets = stock.info
+                            current_price = price_targets.get('currentPrice', 0)
+                            target_low = price_targets.get('targetLowPrice', 0)
+                            target_mean = price_targets.get('targetMeanPrice', 0)
+                            target_high = price_targets.get('targetHighPrice', 0)
 
-                fig_targets = go.Figure()
+                            fig_targets = go.Figure()
 
-                fig_targets.add_trace(go.Indicator(
-                    mode="number+gauge+delta",
-                    value=current_price,
-                    delta={'reference': target_mean, 'position': "top"},
-                    domain={'x': [0.1, 1], 'y': [0, 1]},
-                    title={'text': "Price Target"},
-                    gauge={
-                        'axis': {'range': [None, target_high], 'tickwidth': 1},
-                        'bar': {'color': "darkblue"},
-                        'steps': [
-                            {'range': [0, target_low], 'color': "red"},
-                            {'range': [target_low, target_high], 'color': "lightgreen"}
-                        ],
-                        'threshold': {
-                            'line': {'color': "red", 'width': 4},
-                            'thickness': 0.75,
-                            'value': target_mean
-                        }
-                    }
-                ))
+                            fig_targets.add_trace(go.Indicator(
+                                mode="number+gauge+delta",
+                                value=current_price,
+                                delta={'reference': target_mean, 'position': "top"},
+                                domain={'x': [0.1, 1], 'y': [0, 1]},
+                                title={'text': "Price Target"},
+                                gauge={
+                                    'axis': {'range': [None, target_high], 'tickwidth': 1},
+                                    'bar': {'color': "darkblue"},
+                                    'steps': [
+                                        {'range': [0, target_low], 'color': "red"},
+                                        {'range': [target_low, target_high], 'color': "lightgreen"}
+                                    ],
+                                    'threshold': {
+                                        'line': {'color': "red", 'width': 4},
+                                        'thickness': 0.75,
+                                        'value': target_mean
+                                    }
+                                }
+                            ))
 
-                fig_targets.update_layout(
-                    title="Analyst Price Targets",
-                    height=400  # Adjust height as needed
-                )
+                            fig_targets.update_layout(
+                                title="Analyst Price Targets",
+                                height=400  # Adjust height as needed
+                            )
 
-                st.plotly_chart(fig_targets, use_container_width=True)
+                            st.plotly_chart(fig_targets, use_container_width=True)
 
-            # Display the latest recommendations
-            latest = summary.iloc[0]
-            col1, col2, col3, col4, col5 = st.columns(5)
-            col1.metric("Strong Buy", latest['strongBuy'])
-            col2.metric("Buy", latest['buy'])
-            col3.metric("Hold", latest['hold'])
-            col4.metric("Sell", latest['sell'])
-            col5.metric("Strong Sell", latest['strongSell'])
+                        # Display the latest recommendations
+                        latest = summary.iloc[0]
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        col1.metric("Strong Buy", latest['strongBuy'])
+                        col2.metric("Buy", latest['buy'])
+                        col3.metric("Hold", latest['hold'])
+                        col4.metric("Sell", latest['sell'])
+                        col5.metric("Strong Sell", latest['strongSell'])
 
-    except Exception as e:
-        st.error(f"Error fetching analyst ratings: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error fetching analyst ratings: {str(e)}")
 
                 # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
