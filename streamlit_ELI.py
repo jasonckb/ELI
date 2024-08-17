@@ -408,10 +408,21 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
-                                       strike_price, airbag_price, knockout_price, 
-                                       strike_name, knockout_name)
-                st.plotly_chart(fig, use_container_width=True)
+                try:
+                    fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
+                                           strike_price, airbag_price, knockout_price, 
+                                           strike_name, knockout_name)
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error plotting stock chart: {str(e)}")
+                    st.write("Debug information for plot_stock_chart:")
+                    st.write(f"Data shape: {st.session_state.data.shape}")
+                    st.write(f"Formatted ticker: {st.session_state.formatted_ticker}")
+                    st.write(f"Strike price: {strike_price}")
+                    st.write(f"Airbag price: {airbag_price}")
+                    st.write(f"Knockout price: {knockout_price}")
+                    st.write(f"Strike name: {strike_name}")
+                    st.write(f"Knockout name: {knockout_name}")
 
                 # Display EMA values
                 st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
