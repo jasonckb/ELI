@@ -243,7 +243,7 @@ def get_financial_data(ticker):
     balance_sheet = stock.balance_sheet
     financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
     financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Nete Debt' in balance_sheet.index else 0
+    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
     
     # Income statement data
     income_stmt = stock.financials
@@ -265,7 +265,7 @@ def get_financial_data(ticker):
         financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
 
     # Additional info
-    financials['shares_outstanding'] = stock.info.get('Share Issued')
+    financials['shares_outstanding'] = stock.info.get('Ordinary Shares Number')
     financials['market_cap'] = stock.info.get('marketCap')
     
     return financials
