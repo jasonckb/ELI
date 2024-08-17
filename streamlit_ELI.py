@@ -310,7 +310,7 @@ def main():
                                 yaxis_title="Number of Recommendations",
                                 legend_title="Recommendation Type",
                                 height=400,
-                                margin=dict(l=50, r=50, t=50, b=50)
+                                margin=dict(l=50, r=50, t=50, b=100)
                             )
 
                             st.plotly_chart(fig_summary, use_container_width=True)
