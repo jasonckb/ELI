@@ -8,7 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 import plotly.io as pio
 import os
-from yahoofinancials import YahooFinancials  # Add this line
+from yahoofinancials import YahooFinancials
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -59,7 +59,7 @@ def calculate_volume_profile(data, bins=40):
     
     return volume_profile, bin_centers, bin_size, poc_price, value_area_low, value_area_high
 
-def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, strike_name="Strike Price", knockout_name="Knock-out Price"):
+def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, strike_name, knockout_name):
     fig = go.Figure()
 
     # Candlestick chart with custom colors
@@ -103,6 +103,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
                       line=dict(color="orange", width=2, dash="dash"))
         fig.add_annotation(x=annotation_x, y=knockout_price, text=f"{knockout_name}: {knockout_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
+
     # Add EMA lines
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_20.iloc[-1], y1=ema_20.iloc[-1],
                   line=dict(color="gray", width=1, dash="dash"))
@@ -198,8 +199,8 @@ def get_financial_metrics(ticker):
         "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100,
         "Price/Book": info.get("priceToBook", "N/A"),
         "Net Income": info.get("netIncomeToCommon", "N/A"),
-        "Revenue": info.get("totalRevenue", "N/A"),  # Changed from "revenue" to "totalRevenue"
-        "Profit Margin": info.get("profitMargins", "N/A"),  # Changed from "profitMargin" to "profitMargins"
+        "Revenue": info.get("totalRevenue", "N/A"),
+        "Profit Margin": info.get("profitMargins", "N/A"),
         "ROE": info.get("returnOnEquity", "N/A"),
     }
     
@@ -224,73 +225,6 @@ def get_financial_metrics(ticker):
             metrics[key] = round(value, 2)
     
     return metrics
-
-def get_yahoo_finance_news(ticker):
-    url = f"https://finance.yahoo.com/quote/{ticker}/news/"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        news_items = soup.find_all('li', class_='js-stream-content Pos(r)')
-        
-        news = []
-        for item in news_items[:5]:  # Get top 5 news items
-            title_element = item.find('h3')
-            link_element = item.find('a', href=True)
-            
-            if title_element and link_element:
-                title = title_element.text.strip()
-                link = link_element['href']
-                # Ensure the link is absolute
-                if link.startswith('/'):
-                    link = f"https://finance.yahoo.com{link}"
-                news.append((title, link))
-        
-        return news
-    except Exception as e:
-        st.error(f"Error fetching news: {str(e)}")
-        return []
-    
-def get_analyst_ratings(ticker):
-    yahoo_financials = YahooFinancials(ticker)
-    analyst_data = yahoo_financials.get_stock_earnings_data()
-    
-    if analyst_data and ticker in analyst_data:
-        earnings_data = analyst_data[ticker]
-        if 'quarterly_earnings_data' in earnings_data:
-            quarterly_data = earnings_data['quarterly_earnings_data']
-            if quarterly_data:
-                latest_quarter = list(quarterly_data.keys())[0]
-                return quarterly_data[latest_quarter]
-    
-    return None
-
-def get_analyst_recommendations(ticker):
-    stock = yf.Ticker(ticker)
-    recommendations = stock.recommendations
-    if recommendations is not None and not recommendations.empty:
-        recent_recommendations = recommendations.tail(10)  # Get last 10 recommendations
-        upgrades = recent_recommendations[recent_recommendations['To Grade'] > recent_recommendations['From Grade']]
-        downgrades = recent_recommendations[recent_recommendations['To Grade'] < recent_recommendations['From Grade']]
-        
-        latest_recommendations = recommendations.iloc[-1]
-        buy_count = latest_recommendations.get('Buy', 0)
-        hold_count = latest_recommendations.get('Hold', 0)
-        sell_count = latest_recommendations.get('Sell', 0)
-        
-        return {
-            'upgrades': upgrades,
-            'downgrades': downgrades,
-            'summary': {
-                'Buy': buy_count,
-                'Hold': hold_count,
-                'Sell': sell_count
-            }
-        }
-    return None  
 
 def main():
     st.title("Stock Fundamentals with Key Levels by JC")
@@ -407,7 +341,9 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
+                                       strike_price, airbag_price, knockout_price,
+                                       strike_name, knockout_name)
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Display EMA values
