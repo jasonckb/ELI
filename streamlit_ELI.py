@@ -581,15 +581,53 @@ def main():
                     
                     fair_value = equity_value / shares_outstanding
                     
-                    # Display results
-                                    
-                    st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Beta:</b> {beta:.2%}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-                    
+                    # Display results                  
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        # Your existing display code
+                        st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
+
+                    with col2:
+                        # New visualization code
+                        df = pd.DataFrame({
+                            'Type': ['Current Price', 'Fair Value'],
+                            'Price': [current_price, fair_value]
+                        })
+                        
+                        diff_percentage = (fair_value / current_price - 1) * 100
+                        if diff_percentage > 0:
+                            diff_label = f"Discount: {diff_percentage:.2f}%"
+                            color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
+                        else:
+                            diff_label = f"Premium: {abs(diff_percentage):.2f}%"
+                            color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
+                        
+                        fig = go.Figure()
+                        fig.add_trace(go.Bar(
+                            x=df['Price'],
+                            y=df['Type'],
+                            orientation='h',
+                            marker_color=color_scheme,
+                            text=df['Price'].apply(lambda x: f'${x:.2f}'),
+                            textposition='outside'
+                        ))
+                        
+                        fig.update_layout(
+                            title=f"Price Comparison<br><sub>{diff_label}</sub>",
+                            xaxis_title="Price ($)",
+                            yaxis_title="",
+                            height=300,
+                            width=400,
+                            margin=dict(l=0, r=0, t=40, b=0),
+                        )
+                        
+                        st.plotly_chart(fig)
                     # Calculate and display upside/downside
                     upside = (fair_value / current_price - 1) * 100
                     st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
