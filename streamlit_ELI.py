@@ -600,12 +600,13 @@ def main():
                             'Price': [current_price, fair_value]
                         })
                         
-                        diff_percentage = (fair_value / current_price - 1) * 100
-                        if diff_percentage > 0:
-                            diff_label = f"Discount: {diff_percentage:.2f}%"
+                        diff = fair_value - current_price
+                        diff_percentage = ( current_price/ fair_value  - 1) * 100
+                        if diff > 0:
+                            diff_label = f"Discount: {diff_percentage:.1f}%"
                             color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
                         else:
-                            diff_label = f"Premium: {abs(diff_percentage):.2f}%"
+                            diff_label = f"Premium: {abs(diff_percentage):.1f}%"
                             color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
                         
                         fig = go.Figure()
@@ -619,7 +620,7 @@ def main():
                                 y=[row['Type']],
                                 orientation='h',
                                 marker_color=color_scheme[i],
-                                text=[f"${row['Price']:.2f}"],
+                                text=[f"${row['Price']:.1f}"],
                                 textposition='auto',
                                 insidetextanchor='middle',
                                 textfont=dict(color='white' if row['Price'] / max_x > 0.3 else 'black')
