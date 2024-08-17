@@ -236,7 +236,6 @@ def main():
     with col1:
         ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
         
-        # Add radio buttons for naming choice
         knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
         strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
         
@@ -244,13 +243,10 @@ def main():
         strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
         
-        # Add a refresh button
         refresh = st.button("Refresh Data")
 
-        # Display current price and calculated levels with larger text in the sidebar
         st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
 
-    # Format ticker and fetch data when input changes or refresh is clicked
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
         st.session_state.formatted_ticker = format_ticker(ticker)
         try:
@@ -259,32 +255,27 @@ def main():
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
 
-    # Main logic
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
             current_price = st.session_state.data['Close'].iloc[-1]
             strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
 
-            # Display current price and calculated levels in the sidebar
             with col1:
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
                 st.markdown(f"<p>{knockout_name} ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
 
-            # Main chart and data display
             with col2:
-                # Add financial metrics above the chart
                 st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
                     metrics = get_financial_metrics(st.session_state.formatted_ticker)
-                    cols = st.columns(2)  # Create 2 columns for metrics display
+                    cols = st.columns(2)
                     for i, (key, value) in enumerate(metrics.items()):
                         cols[i % 2].markdown(f"<b>{key}:</b> {value}", unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
-                # Add analyst ratings
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
@@ -293,20 +284,15 @@ def main():
                         st.subheader("Recommendation Summary")
                         summary = stock.recommendations_summary.set_index('period')
 
-                        # Create two columns for the charts
                         col1, col2 = st.columns(2)
 
                         with col1:
-                            # Create a bar chart for the recommendation summary
                             fig_summary = go.Figure()
                             categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
                             colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
-
                             period_labels = {
-                                '0m': 'Current Month',
-                                '-1m': '1 Month Ago',
-                                '-2m': '2 Months Ago',
-                                '-3m': '3 Months Ago'
+                                '0m': 'Current Month', '-1m': '1 Month Ago',
+                                '-2m': '2 Months Ago', '-3m': '3 Months Ago'
                             }
 
                             for category, color in zip(categories, colors):
@@ -323,13 +309,13 @@ def main():
                                 xaxis_title="Period",
                                 yaxis_title="Number of Recommendations",
                                 legend_title="Recommendation Type",
-                                height=400  # Adjust height as needed
+                                height=400,
+                                margin=dict(l=50, r=50, t=50, b=50)
                             )
 
                             st.plotly_chart(fig_summary, use_container_width=True)
 
                         with col2:
-                            # Create a price target chart
                             price_targets = stock.info
                             current_price = price_targets.get('currentPrice', 0)
                             target_low = price_targets.get('targetLowPrice', 0)
@@ -342,7 +328,7 @@ def main():
                                 mode="number+gauge+delta",
                                 value=current_price,
                                 delta={'reference': target_mean, 'position': "top"},
-                                domain={'x': [0, 0.7], 'y': [0, 1]},  # Adjust domain to make room for notes
+                                domain={'x': [0, 1], 'y': [0, 0.7]},
                                 title={'text': "Price Target"},
                                 gauge={
                                     'axis': {'range': [None, target_high], 'tickwidth': 1},
@@ -359,50 +345,29 @@ def main():
                                 }
                             ))
 
-                            # Add explanatory text as annotations
-                            fig_targets.add_annotation(
-                                x=0.85, y=0.9,
-                                xref="paper", yref="paper",
-                                text=f"<b>Green zone:</b> Price target range<br>${target_low:.2f} to ${target_high:.2f}",
-                                showarrow=False,
-                                font=dict(size=12),
-                                align="left",
-                                bgcolor="white",
-                                bordercolor="black",
-                                borderwidth=1,
-                                borderpad=4
-                            )
-
-                            fig_targets.add_annotation(
-                                x=0.85, y=0.7,
-                                xref="paper", yref="paper",
-                                text=f"<b>Red line:</b> Average target<br>${target_mean:.2f}",
-                                showarrow=False,
-                                font=dict(size=12),
-                                align="left",
-                                bgcolor="white",
-                                bordercolor="black",
-                                borderwidth=1,
-                                borderpad=4
-                            )
-
-                            fig_targets.add_annotation(
-                                x=0.85, y=0.5,
-                                xref="paper", yref="paper",
-                                text=f"<b>Blue bar:</b> Current price<br>${current_price:.2f}",
-                                showarrow=False,
-                                font=dict(size=12),
-                                align="left",
-                                bgcolor="white",
-                                bordercolor="black",
-                                borderwidth=1,
-                                borderpad=4
-                            )
-
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
-                                height=400,  # Adjust height as needed
-                                margin=dict(r=100, t=50, b=50),  # Increase right margin for notes
+                                height=400,
+                                margin=dict(l=50, r=50, t=50, b=50),
+                            )
+
+                            # Add explanatory text below the chart
+                            annotation_text = (
+                                f"<b>Green zone:</b> Price target range ${target_low:.2f} to ${target_high:.2f}<br>"
+                                f"<b>Red line:</b> Average target ${target_mean:.2f}<br>"
+                                f"<b>Blue bar:</b> Current price ${current_price:.2f}"
+                            )
+                            fig_targets.add_annotation(
+                                x=0.5, y=-0.2,
+                                xref="paper", yref="paper",
+                                text=annotation_text,
+                                showarrow=False,
+                                font=dict(size=12),
+                                align="center",
+                                bordercolor="black",
+                                borderwidth=1,
+                                borderpad=4,
+                                bgcolor="white",
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
@@ -419,17 +384,14 @@ def main():
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
 
-                # Add some space between metrics and chart
                 st.markdown("<br>", unsafe_allow_html=True)
 
-                # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
                                        strike_name, knockout_name)
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Display EMA values
                 st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
                 ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
                 ema_50 = calculate_ema(st.session_state.data, 50).iloc[-1]
@@ -438,7 +400,6 @@ def main():
                 st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
 
-                # Display news
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
