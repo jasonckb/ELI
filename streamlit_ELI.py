@@ -225,9 +225,92 @@ def get_financial_metrics(ticker):
             metrics[key] = round(value, 2)
     
     return metrics
+# Helper functions for DCF model
+
+def get_risk_free_rate():
+    try:
+        treasury_ticker = "^TNX"  # 10-year Treasury Yield
+        treasury_data = yf.Ticker(treasury_ticker).history(period="1d")
+        return treasury_data['Close'].iloc[-1] / 100  # Convert to decimal
+    except:
+        return 0.035  # Default to 3.5% if unable to fetch
+
+def get_financial_data(ticker):
+    stock = yf.Ticker(ticker)
+    financials = {}
+    
+    # Balance sheet data
+    balance_sheet = stock.balance_sheet
+    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0]
+    financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0]
+    
+    # Income statement data
+    income_stmt = stock.financials
+    financials['interest_expense'] = income_stmt.loc['Interest Expense'].iloc[0]
+    financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0]
+    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0]
+    
+    # Cash flow statement data
+    cash_flow = stock.cashflow
+    financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
+    financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+    
+    return financials
+
+def calculate_wacc(financials, risk_free_rate, market_risk_premium):
+    total_capital = financials['total_debt'] + financials['total_equity']
+    
+    # Cost of Debt
+    interest_rate = financials['interest_expense'] / financials['total_debt']
+    tax_rate = financials['income_tax'] / financials['net_income']
+    cost_of_debt = interest_rate * (1 - tax_rate)
+    
+    # Cost of Equity (using CAPM)
+    beta = yf.Ticker(ticker).info['beta']
+    cost_of_equity = risk_free_rate + beta * market_risk_premium
+    
+    # WACC
+    wacc = (financials['total_debt'] / total_capital) * cost_of_debt + \
+           (financials['total_equity'] / total_capital) * cost_of_equity
+    
+    return wacc
+
+def calculate_fcf_growth_rate(financials):
+    if financials['fcf_3years_ago'] is not None and financials['fcf_3years_ago'] != 0:
+        return (financials['fcf_latest'] / financials['fcf_3years_ago']) ** (1/3) - 1
+    else:
+        # If 3-year data is not available, use a default growth rate or estimate from other metrics
+        return 0.05  # 5% default growth rate
+
+def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period):
+    fcf = financials['fcf_latest']
+    pv_fcf = 0
+    
+    # High growth period
+    for i in range(1, high_growth_period + 1):
+        fcf *= (1 + fcf_growth_rate)
+        pv_fcf += fcf / ((1 + wacc) ** i)
+    
+    # Terminal value
+    terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
+    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
+    
+    # Enterprise Value
+    enterprise_value = pv_fcf + pv_terminal_value
+    
+    # Equity Value
+    equity_value = enterprise_value - financials['total_debt'] + financials['cash']
+    
+    # Shares outstanding
+    shares_outstanding = yf.Ticker(ticker).info['sharesOutstanding']
+    
+    # Fair value per share
+    fair_value = equity_value / shares_outstanding
+    
+    return fair_value
 
 def main():
-    st.title("Stock Fundamentals with Key Levels by JC")
+    st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
 
     # Create two columns for layout
     col1, col2 = st.columns([1, 4])
@@ -243,9 +326,14 @@ def main():
         strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
         
+        # DCF Model Inputs
+        st.markdown("### DCF Model Inputs")
+        market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
+        terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
+        risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
+        high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
+        
         refresh = st.button("Refresh Data")
-
-        st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
 
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
         st.session_state.formatted_ticker = format_ticker(ticker)
@@ -261,6 +349,7 @@ def main():
             strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
 
             with col1:
+                st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
                 st.markdown(f"<p>{knockout_name} ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
@@ -392,6 +481,32 @@ def main():
                     st.error(f"Error fetching analyst ratings: {str(e)}")
 
                 st.markdown("<br>", unsafe_allow_html=True)
+
+                # New section for DCF Model
+                st.markdown("<h3>Discounted Cash Flow (DCF) Valuation:</h3>", unsafe_allow_html=True)
+                try:
+                    # Fetch required financial data
+                    financials = get_financial_data(st.session_state.formatted_ticker)
+                    
+                    # Calculate WACC and growth rates
+                    wacc = calculate_wacc(financials, risk_free_rate, market_risk_premium)
+                    fcf_growth_rate = calculate_fcf_growth_rate(financials)
+                    
+                    # Perform DCF Valuation
+                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period)
+                    
+                    # Display results
+                    st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
+                    
+                    # Calculate and display upside/downside
+                    upside = (fair_value / current_price - 1) * 100
+                    st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
+                    
+                except Exception as e:
+                    st.error(f"Error calculating DCF valuation: {str(e)}")
 
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
