@@ -328,7 +328,7 @@ def main():
                                 mode="number+gauge+delta",
                                 value=current_price,
                                 delta={'reference': target_mean, 'position': "top"},
-                                domain={'x': [0, 1], 'y': [0, 0.7]},
+                                domain={'x': [0, 1], 'y': [0.25, 1]},  # Adjusted to make room for footnote
                                 title={'text': "Price Target"},
                                 gauge={
                                     'axis': {'range': [None, target_high], 'tickwidth': 1},
@@ -347,8 +347,8 @@ def main():
 
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
-                                height=400,
-                                margin=dict(l=50, r=50, t=50, b=100),  # Increased bottom margin
+                                height=500,  # Increased height to accommodate footnote
+                                margin=dict(l=50, r=50, t=50, b=150),  # Increased bottom margin
                             )
 
                             # Add explanatory text below the chart
@@ -358,18 +358,24 @@ def main():
                                 f"Blue bar: Current price ${current_price:.2f}"
                             )
                             fig_targets.add_annotation(
-                                x=0, y=-0.25,  # Adjusted y position
-                                xref="paper", yref="paper",
+                                x=0.5,  # Centered horizontally
+                                y=0,    # At the bottom of the chart
+                                xref="paper",
+                                yref="paper",
                                 text=annotation_text,
                                 showarrow=False,
                                 font=dict(size=12),
-                                align="left",  # Changed to left align
-                                xanchor="left",  # Anchor to left
+                                align="left",
+                                xanchor="center",
                                 yanchor="top",
                                 bordercolor="black",
                                 borderwidth=1,
-                                borderpad=4,
+                                borderpad=10,
                                 bgcolor="white",
+                                box=dict(
+                                    boxstyle="round",
+                                    pad=5
+                                )
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
