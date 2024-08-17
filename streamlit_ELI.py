@@ -302,9 +302,14 @@ def main():
     # Sidebar inputs (now in the first column)
     with col1:
         ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
-        strike_pct = st.number_input("Strike Price %:", value=0.0)
+        
+        # Add radio buttons for naming choice
+        knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
+        strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
+        
+        knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
+        strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
-        knockout_pct = st.number_input("Knock-out Price %:", value=0.0)
         
         # Add a refresh button
         refresh = st.button("Refresh Data")
@@ -330,9 +335,9 @@ def main():
             # Display current price and calculated levels in the sidebar
             with col1:
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p>Strike Price ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p>{knockout_name} ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Knock-out Price ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
 
             # Main chart and data display
             with col2:
@@ -395,7 +400,6 @@ def main():
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
 
-                    
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
 
@@ -404,7 +408,7 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price, strike_name, knockout_name)
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Display EMA values
@@ -420,7 +424,6 @@ def main():
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
-                
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             st.write("Debug information:")
