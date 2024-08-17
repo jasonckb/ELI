@@ -59,7 +59,7 @@ def calculate_volume_profile(data, bins=40):
     
     return volume_profile, bin_centers, bin_size, poc_price, value_area_low, value_area_high
 
-def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
+def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, strike_name="Strike Price", knockout_name="Knock-out Price"):
     fig = go.Figure()
 
     # Candlestick chart with custom colors
@@ -89,7 +89,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     if strike_price != 0:
         fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=strike_price, y1=strike_price,
                       line=dict(color="blue", width=2, dash="dash"))
-        fig.add_annotation(x=annotation_x, y=strike_price, text=f"Strike Price: {strike_price:.2f}",
+        fig.add_annotation(x=annotation_x, y=strike_price, text=f"{strike_name}: {strike_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
 
     if airbag_price != 0:
@@ -101,9 +101,8 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price):
     if knockout_price != 0:
         fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=knockout_price, y1=knockout_price,
                       line=dict(color="orange", width=2, dash="dash"))
-        fig.add_annotation(x=annotation_x, y=knockout_price, text=f"Knock-out Price: {knockout_price:.2f}",
+        fig.add_annotation(x=annotation_x, y=knockout_price, text=f"{knockout_name}: {knockout_price:.2f}",
                            showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
-
     # Add EMA lines
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_20.iloc[-1], y1=ema_20.iloc[-1],
                   line=dict(color="gray", width=1, dash="dash"))
@@ -408,21 +407,8 @@ def main():
 
                 # Plot the chart
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                try:
-                    fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
-                                           strike_price, airbag_price, knockout_price, 
-                                           strike_name, knockout_name)
-                    st.plotly_chart(fig, use_container_width=True)
-                except Exception as e:
-                    st.error(f"Error plotting stock chart: {str(e)}")
-                    st.write("Debug information for plot_stock_chart:")
-                    st.write(f"Data shape: {st.session_state.data.shape}")
-                    st.write(f"Formatted ticker: {st.session_state.formatted_ticker}")
-                    st.write(f"Strike price: {strike_price}")
-                    st.write(f"Airbag price: {airbag_price}")
-                    st.write(f"Knockout price: {knockout_price}")
-                    st.write(f"Strike name: {strike_name}")
-                    st.write(f"Knockout name: {knockout_name}")
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, strike_price, airbag_price, knockout_price)
+                st.plotly_chart(fig, use_container_width=True)
 
                 # Display EMA values
                 st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
