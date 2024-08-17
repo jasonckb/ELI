@@ -618,14 +618,30 @@ def main():
                             textposition='outside'
                         ))
                         
+                        # Calculate the maximum x-axis value to ensure full visibility
+                        max_x = max(fair_value, current_price) * 1.1  # Add 10% padding
+                        
                         fig.update_layout(
                             title=f"Price Comparison<br><sub>{diff_label}</sub>",
                             xaxis_title="Price ($)",
                             yaxis_title="",
                             height=300,
                             width=400,
-                            margin=dict(l=0, r=0, t=40, b=0),
+                            margin=dict(l=0, r=100, t=40, b=0),  # Increased right margin for labels
+                            xaxis=dict(range=[0, max_x]),  # Set x-axis range
                         )
+                        
+                        # Add value labels to the end of each bar
+                        for i, row in df.iterrows():
+                            fig.add_annotation(
+                                x=row['Price'],
+                                y=row['Type'],
+                                text=f"${row['Price']:.2f}",
+                                showarrow=False,
+                                xanchor='left',
+                                xshift=5,
+                                font=dict(color='black')
+                            )
                         
                         st.plotly_chart(fig)
                     # Calculate and display upside/downside
