@@ -293,7 +293,7 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     weight_of_equity = financials['total_equity'] / total_capital
     
     # WACC
-    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate/100))
+    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
     
     return wacc
 
@@ -516,7 +516,7 @@ def main():
                     beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
                     st.subheader("WACC Calculation:")
                     st.write(f"Risk-free rate: {risk_free_rate:.2%}")
-                    st.write(f"Market risk premium: {market_risk_premium:.2%}")
+                    st.write(f"Market risk premium: {market_risk_premium/100:.2%}")
                     st.write(f"Beta: {beta:.2f}")
                     
                     cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
