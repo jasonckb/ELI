@@ -361,7 +361,36 @@ def main():
 
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
-                                height=400  # Adjust height as needed
+                                height=400,  # Adjust height as needed
+                                annotations=[
+                                    dict(
+                                        x=1.05,
+                                        y=0.8,
+                                        xref="paper",
+                                        yref="paper",
+                                        text=f"Green zone: Price target range<br>${target_low:.2f} to ${target_high:.2f}",
+                                        showarrow=False,
+                                        align="left"
+                                    ),
+                                    dict(
+                                        x=1.05,
+                                        y=0.6,
+                                        xref="paper",
+                                        yref="paper",
+                                        text=f"Red line: Average target @ ${target_mean:.2f}",
+                                        showarrow=False,
+                                        align="left"
+                                    ),
+                                    dict(
+                                        x=1.05,
+                                        y=0.4,
+                                        xref="paper",
+                                        yref="paper",
+                                        text=f"Blue bar: Current price @ ${current_price:.2f}",
+                                        showarrow=False,
+                                        align="left"
+                                    )
+                                ]
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
