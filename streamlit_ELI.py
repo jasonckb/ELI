@@ -348,22 +348,24 @@ def main():
                             fig_targets.update_layout(
                                 title="Analyst Price Targets",
                                 height=400,
-                                margin=dict(l=50, r=50, t=50, b=50),
+                                margin=dict(l=50, r=50, t=50, b=100),  # Increased bottom margin
                             )
 
                             # Add explanatory text below the chart
                             annotation_text = (
-                                f"<b>Green zone:</b> Price target range ${target_low:.2f} to ${target_high:.2f}<br>"
-                                f"<b>Red line:</b> Average target ${target_mean:.2f}<br>"
-                                f"<b>Blue bar:</b> Current price ${current_price:.2f}"
+                                f"Green zone: Price target range ${target_low:.2f} to ${target_high:.2f}<br>"
+                                f"Red line: Average target ${target_mean:.2f}<br>"
+                                f"Blue bar: Current price ${current_price:.2f}"
                             )
                             fig_targets.add_annotation(
-                                x=0.5, y=-0.2,
+                                x=0, y=-0.25,  # Adjusted y position
                                 xref="paper", yref="paper",
                                 text=annotation_text,
                                 showarrow=False,
                                 font=dict(size=12),
-                                align="center",
+                                align="left",  # Changed to left align
+                                xanchor="left",  # Anchor to left
+                                yanchor="top",
                                 bordercolor="black",
                                 borderwidth=1,
                                 borderpad=4,
@@ -372,7 +374,8 @@ def main():
 
                             st.plotly_chart(fig_targets, use_container_width=True)
 
-                        # Display the latest recommendations
+                        # Display the latest recommendations with increased spacing
+                        st.markdown("<br>", unsafe_allow_html=True)  # Add extra space
                         latest = summary.iloc[0]
                         col1, col2, col3, col4, col5 = st.columns(5)
                         col1.metric("Strong Buy", latest['strongBuy'])
@@ -380,6 +383,7 @@ def main():
                         col3.metric("Hold", latest['hold'])
                         col4.metric("Sell", latest['sell'])
                         col5.metric("Strong Sell", latest['strongSell'])
+                        st.markdown("<br>", unsafe_allow_html=True)  # Add extra space
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
