@@ -242,15 +242,15 @@ def get_financial_data(ticker):
     # Balance sheet data
     balance_sheet = stock.balance_sheet
     financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['total_equity'] = balance_sheet.loc['Total Stockholder Equity'].iloc[0] if 'Total Stockholder Equity' in balance_sheet.index else 0
-    financials['cash'] = balance_sheet.loc['Cash'].iloc[0] if 'Cash' in balance_sheet.index else 0
+    financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
+    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Nete Debt' in balance_sheet.index else 0
     
     # Income statement data
     income_stmt = stock.financials
     financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-    financials['income_tax'] = income_stmt.loc['Income Tax Expense'].iloc[0] if 'Income Tax Expense' in income_stmt.index else 0
+    financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
     financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['pre_tax_income'] = income_stmt.loc['Income Before Tax'].iloc[0] if 'Income Before Tax' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
+    financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
     
     # Cash flow statement data
     cash_flow = stock.cashflow
@@ -265,7 +265,7 @@ def get_financial_data(ticker):
         financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
 
     # Additional info
-    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
+    financials['shares_outstanding'] = stock.info.get('Share Issued')
     financials['market_cap'] = stock.info.get('marketCap')
     
     return financials
@@ -321,8 +321,7 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     enterprise_value = pv_fcf + pv_terminal_value
     
     # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
-    
+    equity_value = enterprise_value + financials['net_debt'] 
     # Shares outstanding
     shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)
     
