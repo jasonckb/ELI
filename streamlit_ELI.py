@@ -668,13 +668,13 @@ def main():
                                        strike_name, knockout_name)
                 st.plotly_chart(fig, use_container_width=True)
 
-                st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
-                ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
-                ema_50 = calculate_ema(st.session_state.data, 50).iloc[-1]
-                ema_200 = calculate_ema(st.session_state.data, 200).iloc[-1]
-                st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
+                #st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
+                #ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
+                #ema_50 = calculate_ema(st.session_state.data, 50).iloc[-1]
+                #ema_200 = calculate_ema(st.session_state.data, 200).iloc[-1]
+                #st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
+                #st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
+                #st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
