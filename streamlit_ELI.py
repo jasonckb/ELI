@@ -507,15 +507,79 @@ def main():
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
                     
-                    # Calculate WACC and growth rates
+                    # Display raw financial data
+                    st.subheader("Raw Financial Data:")
+                    for key, value in financials.items():
+                        st.write(f"{key}: {value}")
+                    
+                    # Calculate and display WACC components
                     beta = stock.info.get('beta', 1)
-                    wacc = calculate_wacc(financials, risk_free_rate/100, market_risk_premium/100, beta)
+                    st.subheader("WACC Calculation:")
+                    st.write(f"Risk-free rate: {risk_free_rate:.2%}")
+                    st.write(f"Market risk premium: {market_risk_premium:.2%}")
+                    st.write(f"Beta: {beta:.2f}")
+                    
+                    cost_of_equity = risk_free_rate/100 + beta * (market_risk_premium/100)
+                    st.write(f"Cost of Equity: {cost_of_equity:.2%}")
+                    
+                    if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
+                        cost_of_debt = financials['interest_expense'] / financials['total_debt']
+                    else:
+                        cost_of_debt = risk_free_rate/100
+                    st.write(f"Cost of Debt: {cost_of_debt:.2%}")
+                    
+                    pre_tax_income = financials.get('pre_tax_income', financials['net_income'] + financials['income_tax'])
+                    if pre_tax_income != 0:
+                        tax_rate = financials['income_tax'] / pre_tax_income
+                    else:
+                        tax_rate = 0.30
+                    st.write(f"Tax Rate: {tax_rate:.2%}")
+                    
+                    total_capital = financials['total_debt'] + financials['total_equity']
+                    weight_of_debt = financials['total_debt'] / total_capital
+                    weight_of_equity = financials['total_equity'] / total_capital
+                    st.write(f"Weight of Debt: {weight_of_debt:.2%}")
+                    st.write(f"Weight of Equity: {weight_of_equity:.2%}")
+                    
+                    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+                    st.write(f"WACC: {wacc:.2%}")
+                    
+                    # Calculate and display FCF Growth Rate
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)
+                    st.subheader("FCF Growth Rate Calculation:")
+                    st.write(f"Latest FCF: {financials['fcf_latest']:.2f}")
+                    st.write(f"FCF 3 years ago: {financials['fcf_3years_ago']:.2f}")
+                    st.write(f"FCF Growth Rate: {fcf_growth_rate:.2%}")
                     
                     # Perform DCF Valuation
-                    fair_value = calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate/100, high_growth_period, current_price)
+                    st.subheader("DCF Valuation Steps:")
+                    fcf = financials['fcf_latest']
+                    pv_fcf = 0
+                    for i in range(1, high_growth_period + 1):
+                        fcf *= (1 + fcf_growth_rate)
+                        pv_fcf += fcf / ((1 + wacc) ** i)
+                        st.write(f"Year {i} FCF: {fcf:.2f}, PV: {fcf / ((1 + wacc) ** i):.2f}")
+                    
+                    st.write(f"Sum of PV of FCF: {pv_fcf:.2f}")
+                    
+                    terminal_value = fcf * (1 + terminal_growth_rate/100) / (wacc - terminal_growth_rate/100)
+                    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
+                    st.write(f"Terminal Value: {terminal_value:.2f}")
+                    st.write(f"PV of Terminal Value: {pv_terminal_value:.2f}")
+                    
+                    enterprise_value = pv_fcf + pv_terminal_value
+                    st.write(f"Enterprise Value: {enterprise_value:.2f}")
+                    
+                    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
+                    st.write(f"Equity Value: {equity_value:.2f}")
+                    
+                    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)
+                    st.write(f"Shares Outstanding: {shares_outstanding:.2f}")
+                    
+                    fair_value = equity_value / shares_outstanding
                     
                     # Display results
+                    st.subheader("Final Results:")
                     st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
