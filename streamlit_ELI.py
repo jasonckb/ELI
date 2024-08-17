@@ -377,6 +377,13 @@ def main():
                 st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
                 st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
 
+                # DCF Model Inputs
+                st.markdown("### DCF Model Inputs")
+                market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
+                terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
+                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
+                high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
+
             with col2:
                 st.markdown("<h3>Financial Metrics & Data from Yahoo Finance:</h3>", unsafe_allow_html=True)
                 try:
