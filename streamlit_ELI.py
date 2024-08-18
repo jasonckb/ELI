@@ -446,12 +446,12 @@ def main():
                             st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
                             st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
                             st.markdown(f"""
-                                <table width="80%">
+                                <table width="100%">
                                     <tr>
                                         <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b>Buy:</b> {latest['buy']}</td>
-                                        <td><b>Hold:</b> {latest['hold']}</td>
-                                        <td><b>Sell:</b> {latest['sell']}</td>
+                                        <td><b>       Buy:</b> {latest['buy']}</td>
+                                        <td><b>      Hold:</b> {latest['hold']}</td>
+                                        <td><b>       Sell:</b> {latest['sell']}</td>
                                         <td><b>Strong Sell:</b> {latest['strongSell']}</td>
                                     </tr>
                                 </table>
