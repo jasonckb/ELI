@@ -459,8 +459,64 @@ def main():
                             st.markdown("</div>", unsafe_allow_html=True)
 
                         with col2:
-                            # (Price target chart code remains unchanged)
-                            ...
+                            price_targets = stock.info
+                            current_price = price_targets.get('currentPrice', 0)
+                            target_low = price_targets.get('targetLowPrice', 0)
+                            target_mean = price_targets.get('targetMeanPrice', 0)
+                            target_high = price_targets.get('targetHighPrice', 0)
+
+                            fig_targets = go.Figure()
+
+                            fig_targets.add_trace(go.Indicator(
+                                mode="number+gauge+delta",
+                                value=current_price,
+                                delta={'reference': target_mean, 'position': "top"},
+                                domain={'x': [0, 1], 'y': [0.25, 1]},
+                                title={'text': "Price Target"},
+                                gauge={
+                                    'axis': {'range': [None, target_high], 'tickwidth': 1},
+                                    'bar': {'color': "darkgray"},
+                                    'steps': [
+                                        {'range': [0, target_low], 'color': "red"},
+                                        {'range': [target_low, target_high], 'color': "lightgreen"}
+                                    ],
+                                    'threshold': {
+                                        'line': {'color': "darkgreen", 'width': 4},
+                                        'thickness': 0.75,
+                                        'value': target_mean
+                                    }
+                                }
+                            ))
+
+                            fig_targets.update_layout(
+                                title="Analyst Price Targets",
+                                height=500,
+                                margin=dict(l=50, r=50, t=50, b=70),
+                            )
+
+                            annotation_text = (
+                                f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
+                                f"Green Line: Average target @ ${target_mean:.2f}<br>"
+                                f"Gray Bar: Current price  @ ${current_price:.2f}"
+                            )
+                            fig_targets.add_annotation(
+                                x=0.5,
+                                y=0,
+                                xref="paper",
+                                yref="paper",
+                                text=annotation_text,
+                                showarrow=False,
+                                font=dict(size=12),
+                                align="left",
+                                xanchor="center",
+                                yanchor="top",
+                                bordercolor="black",
+                                borderwidth=1,
+                                borderpad=10,
+                                bgcolor="white",
+                            )
+
+                            st.plotly_chart(fig_targets, use_container_width=True)
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
