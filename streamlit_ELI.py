@@ -653,6 +653,35 @@ def main():
                     st.write("Debug information:")
                     st.write(f"Financials: {financials}")
                 
+                # New section: Intermediate Data for the Calculation
+                st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
+    
+                # Create 4 columns for intermediate data
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.markdown(f"<p><b>Tax Rate:</b> {tax_rate:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Cost of Debt:</b> {cost_of_debt:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Cost of Equity:</b> {cost_of_equity:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Weight of Debt:</b> {weight_of_debt:.2%}</p>", unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Latest FCF:</b> ${financials['fcf_latest']:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF 3 years ago:</b> ${financials['fcf_3years_ago']:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown(f"<p><b>Sum of PV of FCF:</b> ${pv_fcf:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Terminal Value:</b> ${terminal_value:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>PV of Terminal Value:</b> ${pv_terminal_value:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Equity Value:</b> ${equity_value:,.2f}</p>", unsafe_allow_html=True)
+                
+                with col4:
+                    st.markdown(f"<p><b>Net Debt:</b> ${financials['net_debt']:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Shares Outstanding:</b> {shares_outstanding:,.2f}</p>", unsafe_allow_html=True)
+
+                    
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
 
