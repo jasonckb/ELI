@@ -390,15 +390,7 @@ def main():
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
                                        strike_name, knockout_name)
-                st.plotly_chart(fig, use_container_width=True)
-
-                #st.markdown("<h3>Exponential Moving Averages:</h3>", unsafe_allow_html=True)
-                #ema_20 = calculate_ema(st.session_state.data, 20).iloc[-1]
-                #ema_50 = calculate_ema(st.session_state.data, 50).iloc[-1]
-                #ema_200 = calculate_ema(st.session_state.data, 200).iloc[-1]
-                #st.markdown(f"<p>20 EMA: {ema_20:.2f}</p>", unsafe_allow_html=True)
-                #st.markdown(f"<p>50 EMA: {ema_50:.2f}</p>", unsafe_allow_html=True)
-                #st.markdown(f"<p>200 EMA: {ema_200:.2f}</p>", unsafe_allow_html=True)
+                st.plotly_chart(fig, use_container_width=True)               
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
@@ -449,9 +441,9 @@ def main():
                                 <table width="100%">
                                     <tr>
                                         <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b><b><b><b><b><b><b><b>Buy:</b> {latest['buy']}</td>
-                                        <td><b><b><b><b><b><b><b>Hold:</b> {latest['hold']}</td>
-                                        <td><b><b><b><b><b><b><b><b>Sell:</b> {latest['sell']}</td>
+                                        <td><b>Buy:</b> {latest['buy']}</td>
+                                        <td><b>Hold:</b> {latest['hold']}</td>
+                                        <td><b>Sell:</b> {latest['sell']}</td>
                                         <td><b>Strong Sell:</b> {latest['strongSell']}</td>
                                     </tr>
                                 </table>
@@ -528,19 +520,11 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-                    
-                    # Display raw financial data
-                    #st.subheader("Raw Financial Data:")
-                    #for key, value in financials.items():
-                     #   st.write(f"{key}: {value}")
+                                       
                     
                     # Calculate and display WACC components
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
-                    #st.subheader("WACC Calculation:")
-                    #st.write(f"Risk-free rate: {risk_free_rate:.2%}")
-                    #st.write(f"Market risk premium: {market_risk_premium/100:.2%}")
-                    #st.write(f"Beta: {beta:.2f}")
                     
                     cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
                     #st.write(f"Cost of Equity: {cost_of_equity:.2%}")
@@ -554,8 +538,7 @@ def main():
                     if financials['pre_tax_income'] != 0:
                         tax_rate = financials['income_tax'] / financials['pre_tax_income']
                     else:
-                        tax_rate = 0.21  # Assume a default corporate tax rate of 21%
-                    #st.write(f"Tax Rate: {tax_rate:.2%}")
+                        tax_rate = 0.21  # Assume a default corporate tax rate of 21%                    
                     
                     total_capital = financials['total_debt'] + financials['total_equity']
                     if total_capital != 0:
@@ -563,22 +546,15 @@ def main():
                         weight_of_equity = financials['total_equity'] / total_capital
                     else:
                         weight_of_debt = 0
-                        weight_of_equity = 1
-                    #st.write(f"Weight of Debt: {weight_of_debt:.2%}")
-                    #st.write(f"Weight of Equity: {weight_of_equity:.2%}")
+                        weight_of_equity = 1                    
                     
                     wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
-                    #st.write(f"WACC: {wacc:.2%}")
+                    
                     
                     # Calculate and display FCF Growth Rate
-                    fcf_growth_rate = calculate_fcf_growth_rate(financials)
-                    #st.subheader("FCF Growth Rate Calculation:")
-                    #st.write(f"Latest FCF: {financials['fcf_latest']:.2f}")
-                    #st.write(f"FCF 3 years ago: {financials['fcf_3years_ago']:.2f}")
-                    #st.write(f"FCF Growth Rate: {fcf_growth_rate:.2%}")
+                    fcf_growth_rate = calculate_fcf_growth_rate(financials)                    
                     
-                    # Perform DCF Valuation
-                    #st.subheader("DCF Valuation Steps:")
+                    # Perform DCF Valuation                    
                     fcf = financials['fcf_latest']
                     pv_fcf = 0
                     for i in range(1, high_growth_period + 1):
@@ -589,18 +565,13 @@ def main():
                     #st.write(f"Sum of PV of FCF: {pv_fcf:.2f}")
                     
                     terminal_value = fcf * (1 + terminal_growth_rate/100) / (wacc - terminal_growth_rate/100)
-                    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
-                    #st.write(f"Terminal Value: {terminal_value:.2f}")
-                    #st.write(f"PV of Terminal Value: {pv_terminal_value:.2f}")
+                    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)                    
                     
-                    enterprise_value = pv_fcf + pv_terminal_value
-                    #st.write(f"Enterprise Value: {enterprise_value:.2f}")
+                    enterprise_value = pv_fcf + pv_terminal_value                    
                     
-                    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
-                    #st.write(f"Equity Value: {equity_value:.2f}")
+                    equity_value = enterprise_value - financials['Net Debt']                     
                     
-                    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)
-                    #st.write(f"Shares Outstanding: {shares_outstanding:.2f}")
+                    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)                    
                     
                     fair_value = equity_value / shares_outstanding
                     
@@ -676,10 +647,7 @@ def main():
                                 )
                         
                         st.plotly_chart(fig)
-                    # Calculate and display upside/downside
-                    #upside = (fair_value / current_price - 1) * 100
-                    #st.markdown(f"<p><b>{'Upside' if upside > 0 else 'Downside'}:</b> {abs(upside):.2f}%</p>", unsafe_allow_html=True)
-                    
+                                        
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     st.write("Debug information:")
