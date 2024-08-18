@@ -441,6 +441,17 @@ def main():
 
                             st.plotly_chart(fig_summary, use_container_width=True)
 
+                            # Add rating summary below the chart
+                            latest = summary.iloc[0]
+                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
+                            col1, col2, col3, col4, col5 = st.columns(5)
+                            col1.metric("Strong Buy", latest['strongBuy'])
+                            col2.metric("Buy", latest['buy'])
+                            col3.metric("Hold", latest['hold'])
+                            col4.metric("Sell", latest['sell'])
+                            col5.metric("Strong Sell", latest['strongSell'])
+                            st.markdown("</div>", unsafe_allow_html=True)
+
                         with col2:
                             price_targets = stock.info
                             current_price = price_targets.get('currentPrice', 0)
@@ -500,16 +511,6 @@ def main():
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
-
-                        st.markdown("<br>", unsafe_allow_html=True)
-                        latest = summary.iloc[0]
-                        col1, col2, col3, col4, col5 = st.columns(5)
-                        col1.metric("Strong Buy", latest['strongBuy'])
-                        col2.metric("Buy", latest['buy'])
-                        col3.metric("Hold", latest['hold'])
-                        col4.metric("Sell", latest['sell'])
-                        col5.metric("Strong Sell", latest['strongSell'])
-                        st.markdown("<br>", unsafe_allow_html=True)
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
