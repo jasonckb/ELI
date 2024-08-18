@@ -655,7 +655,16 @@ def main():
                 
                 # New section: Intermediate Data for the Calculation
                 st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
-    
+
+                # New function to format large numbers
+                def format_large_number(number):
+                    if abs(number) >= 1e9:
+                        return f"${number/1e9:.2f}B"
+                    elif abs(number) >= 1e6:
+                        return f"${number/1e6:.2f}M"
+                    else:
+                        return f"${number:,.2f}"
+                    
                 # Create 4 columns for intermediate data
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -667,19 +676,19 @@ def main():
                 
                 with col2:
                     st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Latest FCF:</b> ${financials['fcf_latest']:,.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>FCF 3 years ago:</b> ${financials['fcf_3years_ago']:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Latest FCF:</b> {format_large_number(financials['fcf_latest'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF 3 years ago:</b> {format_large_number(financials['fcf_3years_ago'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                 
                 with col3:
-                    st.markdown(f"<p><b>Sum of PV of FCF:</b> ${pv_fcf:,.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Terminal Value:</b> ${terminal_value:,.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>PV of Terminal Value:</b> ${pv_terminal_value:,.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Equity Value:</b> ${equity_value:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Sum of PV of FCF:</b> {format_large_number(pv_fcf)}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Terminal Value:</b> {format_large_number(terminal_value)}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>PV of Terminal Value:</b> {format_large_number(pv_terminal_value)}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Equity Value:</b> {format_large_number(equity_value)}</p>", unsafe_allow_html=True)
                 
                 with col4:
-                    st.markdown(f"<p><b>Net Debt:</b> ${financials['net_debt']:,.2f}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Shares Outstanding:</b> {shares_outstanding:,.2f}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Shares Outstanding:</b> {shares_outstanding:,.2f}M</p>", unsafe_allow_html=True)
 
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
