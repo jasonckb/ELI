@@ -402,7 +402,7 @@ def main():
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
-
+                
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
@@ -442,21 +442,24 @@ def main():
 
                             st.plotly_chart(fig_summary, use_container_width=True)
 
-                            # Add rating summary below the chart
+                            # Add rating summary below the chart                           
                             latest = summary.iloc[0]
                             st.markdown("""
                             <style>
                                 .rating-grid {
                                     display: grid;
                                     grid-template-columns: repeat(5, 1fr);
-                                    gap: 10px;
+                                    gap: 5px;
                                     text-align: center;
                                     border: 1px solid #cccccc;
                                     padding: 10px;
                                     font-size: 0.8em;
                                 }
-                                .rating-grid p {
-                                    margin: 0;
+                                .rating-grid div {
+                                    display: flex;
+                                    flex-direction: column;
+                                    justify-content: center;
+                                    align-items: center;
                                 }
                                 .rating-title {
                                     grid-column: 1 / -1;
@@ -466,11 +469,11 @@ def main():
                             </style>
                             <div class="rating-grid">
                                 <div class="rating-title">Current Month's Rating</div>
-                                <p><b>Strong Buy:</b><br>{}</p>
-                                <p><b>Buy:</b><br>{}</p>
-                                <p><b>Hold:</b><br>{}</p>
-                                <p><b>Sell:</b><br>{}</p>
-                                <p><b>Strong Sell:</b><br>{}</p>
+                                <div><b>Strong Buy</b>{}</div>
+                                <div><b>Buy</b>{}</div>
+                                <div><b>Hold</b>{}</div>
+                                <div><b>Sell</b>{}</div>
+                                <div><b>Strong Sell</b>{}</div>
                             </div>
                             """.format(
                                 latest['strongBuy'],
