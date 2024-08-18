@@ -402,6 +402,7 @@ def main():
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
+
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
@@ -443,20 +444,41 @@ def main():
 
                             # Add rating summary below the chart
                             latest = summary.iloc[0]
-                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
-                            st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
-                            st.markdown(f"""
-                                <table width="100%">
-                                    <tr>
-                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b>Buy:</b> {latest['buy']}</td>
-                                        <td><b>Hold:</b> {latest['hold']}</td>
-                                        <td><b>Sell:</b> {latest['sell']}</td>
-                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
-                                    </tr>
-                                </table>
-                                """, unsafe_allow_html=True)
-                            st.markdown("</div>", unsafe_allow_html=True)
+                            st.markdown("""
+                            <style>
+                                .rating-grid {
+                                    display: grid;
+                                    grid-template-columns: repeat(5, 1fr);
+                                    gap: 10px;
+                                    text-align: center;
+                                    border: 1px solid #cccccc;
+                                    padding: 10px;
+                                    font-size: 0.8em;
+                                }
+                                .rating-grid p {
+                                    margin: 0;
+                                }
+                                .rating-title {
+                                    grid-column: 1 / -1;
+                                    font-weight: bold;
+                                    margin-bottom: 5px;
+                                }
+                            </style>
+                            <div class="rating-grid">
+                                <div class="rating-title">Current Month's Rating</div>
+                                <p><b>Strong Buy:</b><br>{}</p>
+                                <p><b>Buy:</b><br>{}</p>
+                                <p><b>Hold:</b><br>{}</p>
+                                <p><b>Sell:</b><br>{}</p>
+                                <p><b>Strong Sell:</b><br>{}</p>
+                            </div>
+                            """.format(
+                                latest['strongBuy'],
+                                latest['buy'],
+                                latest['hold'],
+                                latest['sell'],
+                                latest['strongSell']
+                            ), unsafe_allow_html=True)
 
                         with col2:
                             price_targets = stock.info
