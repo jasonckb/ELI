@@ -449,9 +449,9 @@ def main():
                                 <table width="100%">
                                     <tr>
                                         <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b>       Buy:</b> {latest['buy']}</td>
-                                        <td><b>      Hold:</b> {latest['hold']}</td>
-                                        <td><b>       Sell:</b> {latest['sell']}</td>
+                                        <td><b><b><b><b><b><b><b><b>Buy:</b> {latest['buy']}</td>
+                                        <td><b><b><b><b><b><b><b>Hold:</b> {latest['hold']}</td>
+                                        <td><b><b><b><b><b><b><b><b>Sell:</b> {latest['sell']}</td>
                                         <td><b>Strong Sell:</b> {latest['strongSell']}</td>
                                     </tr>
                                 </table>
