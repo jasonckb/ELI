@@ -444,12 +444,17 @@ def main():
                             # Add rating summary below the chart
                             latest = summary.iloc[0]
                             st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
-                            col1, col2, col3, col4, col5 = st.columns(5)
-                            col1.metric("Strong Buy", latest['strongBuy'])
-                            col2.metric("Buy", latest['buy'])
-                            col3.metric("Hold", latest['hold'])
-                            col4.metric("Sell", latest['sell'])
-                            col5.metric("Strong Sell", latest['strongSell'])
+                            st.markdown(f"""
+                                <table width="100%">
+                                    <tr>
+                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
+                                        <td><b>Buy:</b> {latest['buy']}</td>
+                                        <td><b>Hold:</b> {latest['hold']}</td>
+                                        <td><b>Sell:</b> {latest['sell']}</td>
+                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
+                                    </tr>
+                                </table>
+                                """, unsafe_allow_html=True)
                             st.markdown("</div>", unsafe_allow_html=True)
 
                         with col2:
