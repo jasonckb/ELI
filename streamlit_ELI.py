@@ -681,15 +681,16 @@ def main():
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                 
                 with col3:
-                    st.markdown(f"<p><b>Sum of PV of FCF:</b> {format_large_number(pv_fcf)}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Terminal Value:</b> {format_large_number(terminal_value)}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>PV of Terminal Value:</b> {format_large_number(pv_terminal_value)}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Equity Value:</b> {format_large_number(equity_value)}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Interest Expense:</b> {format_large_number(financials['interest_expense'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Tax Expense:</b> {format_large_number(financials['income_tax'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Pretax Income:</b> {format_large_number(financials['pre_tax_income'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Total Equity:</b> {format_large_number(financials['total_equity'])}</p>", unsafe_allow_html=True)
                 
                 with col4:
+                    st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Shares Outstanding:</b> {shares_outstanding:,.2f}M</p>", unsafe_allow_html=True)
-
+                    st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
+                    
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
