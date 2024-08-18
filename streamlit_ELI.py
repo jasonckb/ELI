@@ -404,16 +404,17 @@ def main():
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
                 
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     
-                    if not stock.recommendations_summary.empty:
-                        st.subheader("Recommendation Summary")
-                        summary = stock.recommendations_summary.set_index('period')
+                    col1, col2 = st.columns(2)
 
-                        col1, col2 = st.columns(2)
+                    with col1:
+                        if hasattr(stock, 'recommendations_summary') and not stock.recommendations_summary.empty:
+                            st.subheader("Recommendation Summary")
+                            summary = stock.recommendations_summary.set_index('period')
 
-                        with col1:
                             fig_summary = go.Figure()
                             categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
                             colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
@@ -476,19 +477,23 @@ def main():
                                 <div><b>Strong Sell</b>{}</div>
                             </div>
                             """.format(
-                                latest['strongBuy'],
-                                latest['buy'],
-                                latest['hold'],
-                                latest['sell'],
-                                latest['strongSell']
+                                latest.get('strongBuy', 'N/A'),
+                                latest.get('buy', 'N/A'),
+                                latest.get('hold', 'N/A'),
+                                latest.get('sell', 'N/A'),
+                                latest.get('strongSell', 'N/A')
                             ), unsafe_allow_html=True)
+                        else:
+                            st.warning("No analyst recommendations data available for this stock.")
 
-                        with col2:
-                            price_targets = stock.info
-                            current_price = price_targets.get('currentPrice', 0)
-                            target_low = price_targets.get('targetLowPrice', 0)
-                            target_mean = price_targets.get('targetMeanPrice', 0)
-                            target_high = price_targets.get('targetHighPrice', 0)
+                    with col2:
+                        price_targets = stock.info
+                        required_keys = ['currentPrice', 'targetLowPrice', 'targetMeanPrice', 'targetHighPrice']
+                        if all(key in price_targets for key in required_keys):
+                            current_price = price_targets['currentPrice']
+                            target_low = price_targets['targetLowPrice']
+                            target_mean = price_targets['targetMeanPrice']
+                            target_high = price_targets['targetHighPrice']
 
                             fig_targets = go.Figure()
 
@@ -542,9 +547,16 @@ def main():
                             )
 
                             st.plotly_chart(fig_targets, use_container_width=True)
+                        else:
+                            st.warning("Price target information is not available for this stock.")
 
                 except Exception as e:
-                    st.error(f"Error fetching analyst ratings: {str(e)}")
+                    st.error(f"Error in Analyst Ratings section: {str(e)}")
+                    st.write("Debug info:")
+                    st.write(f"Ticker: {st.session_state.formatted_ticker}")
+                    if 'stock' in locals():
+                        st.write("Stock info keys:", stock.info.keys() if hasattr(stock, 'info') else "No info available")
+                        st.write("Recommendations summary:", stock.recommendations_summary if hasattr(stock, 'recommendations_summary') else "No recommendations available")
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
