@@ -442,7 +442,7 @@ def main():
 
                             st.plotly_chart(fig_summary, use_container_width=True)
 
-                            # Add rating summary below the chart                           
+                            # Add rating summary below the chart
                             latest = summary.iloc[0]
                             st.markdown("""
                             <style>
