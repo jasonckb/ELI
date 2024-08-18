@@ -569,7 +569,7 @@ def main():
                     
                     enterprise_value = pv_fcf + pv_terminal_value                    
                     
-                    equity_value = enterprise_value - financials['net_debt']                  
+                    equity_value = enterprise_value  - financials['total_debt'] + financials.get('cash', 0)#- financials['net_debt']                  
                     
                     shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)                    
                     
