@@ -443,50 +443,19 @@ def main():
 
                             # Add rating summary below the chart
                             latest = summary.iloc[0]
-                            st.markdown("""
-                            <style>
-                                .rating-table {
-                                    width: 100%;
-                                    border-collapse: collapse;
-                                    text-align: center;
-                                    font-size: 0.8em;
-                                }
-                                .rating-table th, .rating-table td {
-                                    border: 1px solid #cccccc;
-                                    padding: 5px;
-                                    width: 20%;  /* This ensures equal width for all columns */
-                                }
-                                .rating-table th {
-                                    background-color: #f0f0f0;
-                                    font-weight: bold;
-                                }
-                            </style>
-                            <table class="rating-table">
-                                <tr>
-                                    <th colspan="5">Current Month's Rating</th>
-                                </tr>
-                                <tr>
-                                    <th>Strong Buy</th>
-                                    <th>Buy</th>
-                                    <th>Hold</th>
-                                    <th>Sell</th>
-                                    <th>Strong Sell</th>
-                                </tr>
-                                <tr>
-                                    <td>{}</td>
-                                    <td>{}</td>
-                                    <td>{}</td>
-                                    <td>{}</td>
-                                    <td>{}</td>
-                                </tr>
-                            </table>
-                            """.format(
-                                latest['strongBuy'],
-                                latest['buy'],
-                                latest['hold'],
-                                latest['sell'],
-                                latest['strongSell']
-                            ), unsafe_allow_html=True)
+                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
+                            st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
+                            st.markdown(f"""
+                                <table width="100%">
+                                    <tr>
+                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
+                                        <td><b>Buy:</b> {latest['buy']}</td>
+                                        <td><b>Hold:</b> {latest['hold']}</td>
+                                        <td><b>Sell:</b> {latest['sell']}</td>
+                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
+                                    </tr>
+                                </table>
+                                """, unsafe_allow_html=True)
                             st.markdown("</div>", unsafe_allow_html=True)
 
                         with col2:
