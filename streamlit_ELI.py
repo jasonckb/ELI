@@ -306,18 +306,23 @@ def calculate_fcf_growth_rate(financials):
     fcf_3years_ago = financials['fcf_3years_ago']
 
     if fcf_latest <= 0 or all(fcf <= 0 for fcf in [fcf_1year_ago, fcf_2years_ago, fcf_3years_ago] if fcf is not None):
-        return "Growth rate cannot be estimated due to negative FCF"
+        return None, "Growth rate cannot be estimated due to negative FCF"
 
     if fcf_3years_ago is not None and fcf_3years_ago > 0:
-        return (fcf_latest / fcf_3years_ago) ** (1/3) - 1
+        return (fcf_latest / fcf_3years_ago) ** (1/3) - 1, None
     elif fcf_2years_ago is not None and fcf_2years_ago > 0:
-        return (fcf_latest / fcf_2years_ago) ** (1/2) - 1
+        return (fcf_latest / fcf_2years_ago) ** (1/2) - 1, None
     elif fcf_1year_ago is not None and fcf_1year_ago > 0:
-        return (fcf_latest / fcf_1year_ago) - 1
+        return (fcf_latest / fcf_1year_ago) - 1, None
     else:
-        return "Growth rate cannot be estimated due to negative FCF"
+        return None, "Growth rate cannot be estimated due to negative FCF"
 
-def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_rate, high_growth_period, current_price):
+def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price):
+    fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
+    
+    if error_message:
+        return None, error_message
+    
     fcf = financials['fcf_latest']
     pv_fcf = 0
     
@@ -341,7 +346,7 @@ def calculate_dcf_fair_value(financials, wacc, fcf_growth_rate, terminal_growth_
     # Fair value per share
     fair_value = equity_value / shares_outstanding
     
-    return fair_value
+    return fair_value, None
 
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
