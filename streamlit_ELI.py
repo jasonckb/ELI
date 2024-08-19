@@ -339,9 +339,14 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     enterprise_value = pv_fcf + pv_terminal_value
     
     # Equity Value
-    equity_value = enterprise_value + financials['net_debt'] 
+    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)#- financials['net_debt']      
+    
     # Shares outstanding
-    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)
+    shares_outstanding = financials.get('shares_outstanding')
+    if shares_outstanding is None:
+        if current_price <= 0:
+            return None, "Invalid current price for calculating shares outstanding"
+        shares_outstanding = equity_value / current_price
     
     # Fair value per share
     fair_value = equity_value / shares_outstanding
@@ -573,25 +578,12 @@ def main():
                     fcf_growth_rate = calculate_fcf_growth_rate(financials)                    
                     
                     # Perform DCF Valuation                    
-                    fcf = financials['fcf_latest']
-                    pv_fcf = 0
-                    for i in range(1, high_growth_period + 1):
-                        fcf *= (1 + fcf_growth_rate)
-                        pv_fcf += fcf / ((1 + wacc) ** i)
-                        #st.write(f"Year {i} FCF: {fcf:.2f}, PV: {fcf / ((1 + wacc) ** i):.2f}")
-                    
-                    #st.write(f"Sum of PV of FCF: {pv_fcf:.2f}")
-                    
-                    terminal_value = fcf * (1 + terminal_growth_rate/100) / (wacc - terminal_growth_rate/100)
-                    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)                    
-                    
-                    enterprise_value = pv_fcf + pv_terminal_value                    
-                    
-                    equity_value = enterprise_value  - financials['total_debt'] + financials.get('cash', 0)#- financials['net_debt']                  
-                    
-                    shares_outstanding = financials.get('shares_outstanding', equity_value / current_price)                    
-                    
-                    fair_value = equity_value / shares_outstanding
+                    fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price)
+                    if error_message:
+                        print(f"Error: {error_message}")
+                    else:
+                        print(f"Fair Value: ${fair_value:.2f}")
+
                     
                     # Display results                  
                     col1, col2 = st.columns(2)
@@ -605,8 +597,8 @@ def main():
                             st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                         else:
                             st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate}</p>", unsafe_allow_html=True)
-                        if fcf_growth_rate == "Growth rate cannot be estimated due to negative FCF":
-                            st.markdown("<p><b>Fair Value:</b> DCF model not applicable for negative FCF</p>", unsafe_allow_html=True)
+                        if error_message:
+                            st.markdown(f"<p><b>Fair Value:</b> {error_message}</p>", unsafe_allow_html=True)
                         else:
                             st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
