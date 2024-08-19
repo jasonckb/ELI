@@ -653,7 +653,7 @@ def main():
                             
                             st.plotly_chart(fig)
                             
-                            st.markdown(f"<p><b>Difference:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
+                            st.markdown(f"<p><b>Difference with Fair Value:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
                             
                             
                         else:
