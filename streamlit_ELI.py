@@ -301,7 +301,7 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
 
 def calculate_fcf_growth_rate(financials):
     fcf_latest = financials['fcf_latest']
-    fcf_1year_ago = financials['fcf_1year_ago']
+    fcf_1year_ago = financials['fcf_1years_ago']
     fcf_2years_ago = financials['fcf_2years_ago']
     fcf_3years_ago = financials['fcf_3years_ago']
 
