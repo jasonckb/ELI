@@ -601,13 +601,14 @@ def main():
                             })
                             
                             diff = fair_value - current_price
-                            percentage_diff = (diff / current_price) * 100
+                            percentage_dis = (1-current_price / fair_value) * 100
+                            percentage_pre = (current_price / fair_value-1) * 100
                             
                             if diff > 0:
-                                diff_label = f"Undervalued by {abs(percentage_diff):.1f}%"
+                                diff_label = f"Discount by {abs(percentage_dis):.1f}%"
                                 color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
                             else:
-                                diff_label = f"Overvalued by {abs(percentage_diff):.1f}%"
+                                diff_label = f"Premium by {abs(percentage_pre):.1f}%"
                                 color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
                             
                             fig = go.Figure()
@@ -653,19 +654,10 @@ def main():
                             st.plotly_chart(fig)
                             
                             st.markdown(f"<p><b>Difference:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
-                            st.markdown(f"<p><b>Percentage Difference:</b> {percentage_diff:.2f}%</p>", unsafe_allow_html=True)
                             
-                            if abs(percentage_diff) < 10:
-                                recommendation = "The stock appears to be fairly valued."
-                            elif diff > 0:
-                                recommendation = "The stock may be undervalued and could be considered for purchase."
-                            else:
-                                recommendation = "The stock may be overvalued and could be considered for sale if owned."
-                            
-                            st.markdown(f"<p><b>Recommendation:</b> {recommendation}</p>", unsafe_allow_html=True)
                             
                         else:
-                            st.markdown("<p>Fair value visualization not available due to calculation errors.</p>", unsafe_allow_html=True)
+                            st.markdown("<p>Fair value cannot be estimated due to negative FCF.</p>", unsafe_allow_html=True)
                             if error_message:
                                 st.markdown(f"<p><b>Error Details:</b> {error_message}</p>", unsafe_allow_html=True)
                             st.markdown("<p>Please check the input data and ensure all required financial information is available.</p>", unsafe_allow_html=True)
