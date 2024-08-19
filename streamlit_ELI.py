@@ -539,7 +539,7 @@ def main():
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 # New section for DCF Model
-                st.markdown("<h3>Fair Value by 2-Stage Discounted Cash Flow (DCF) Valuation:</h3>", unsafe_allow_html=True)
+                st.markdown("<h3>Fair Value by 2-Stage Discounted Cash Flow (DCF) Valuation: (Not Suitable for Banking Stock) </h3>", unsafe_allow_html=True)
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
