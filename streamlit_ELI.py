@@ -324,11 +324,6 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
         return None, error_message
     
     fcf = financials['fcf_latest']
-    
-    # Check if FCF is negative
-    if fcf <= 0:
-        return None, "DCF is inapplicable due to negative FCF"
-    
     pv_fcf = 0
     
     # High growth period
@@ -348,7 +343,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     
     # Shares outstanding
     shares_outstanding = financials.get('shares_outstanding')
-    if shares_outstanding is None or shares_outstanding <= 0:
+    if shares_outstanding is None:
         if current_price <= 0:
             return None, "Invalid current price for calculating shares outstanding"
         shares_outstanding = equity_value / current_price
@@ -401,7 +396,7 @@ def main():
                 st.markdown("### DCF Model Inputs")
                 market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
                 terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
-                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate() * 100, step=0.01) / 100
+                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
                 high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
 
             with col2:
@@ -418,10 +413,128 @@ def main():
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
                                        strike_name, knockout_name)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)               
 
+                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
+                st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
-                display_analyst_ratings(st.session_state.formatted_ticker)
+                try:
+                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    
+                    if not stock.recommendations_summary.empty:
+                        st.subheader("Recommendation Summary")
+                        summary = stock.recommendations_summary.set_index('period')
+
+                        col1, col2 = st.columns(2)
+
+                        with col1:
+                            fig_summary = go.Figure()
+                            categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
+                            colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
+                            period_labels = {
+                                '0m': 'Current Month', '-1m': '1 Month Ago',
+                                '-2m': '2 Months Ago', '-3m': '3 Months Ago'
+                            }
+
+                            for category, color in zip(categories, colors):
+                                fig_summary.add_trace(go.Bar(
+                                    x=[period_labels.get(x, x) for x in summary.index],
+                                    y=summary[category],
+                                    name=category.capitalize(),
+                                    marker_color=color
+                                ))
+
+                            fig_summary.update_layout(
+                                barmode='stack',
+                                title="Analyst Recommendations Over Time",
+                                xaxis_title="Period",
+                                yaxis_title="Number of Recommendations",
+                                legend_title="Recommendation Type",
+                                height=400,
+                                margin=dict(l=50, r=50, t=50, b=70)
+                            )
+
+                            st.plotly_chart(fig_summary, use_container_width=True)
+
+                            # Add rating summary below the chart
+                            latest = summary.iloc[0]
+                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
+                            st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
+                            st.markdown(f"""
+                                <table width="100%">
+                                    <tr>
+                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
+                                        <td><b>Buy:</b> {latest['buy']}</td>
+                                        <td><b>Hold:</b> {latest['hold']}</td>
+                                        <td><b>Sell:</b> {latest['sell']}</td>
+                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
+                                    </tr>
+                                </table>
+                                """, unsafe_allow_html=True)
+                            st.markdown("</div>", unsafe_allow_html=True)
+
+                        with col2:
+                            price_targets = stock.info
+                            current_price = price_targets.get('currentPrice', 0)
+                            target_low = price_targets.get('targetLowPrice', 0)
+                            target_mean = price_targets.get('targetMeanPrice', 0)
+                            target_high = price_targets.get('targetHighPrice', 0)
+
+                            fig_targets = go.Figure()
+
+                            fig_targets.add_trace(go.Indicator(
+                                mode="number+gauge+delta",
+                                value=current_price,
+                                delta={'reference': target_mean, 'position': "top"},
+                                domain={'x': [0, 1], 'y': [0.25, 1]},
+                                title={'text': "Price Target"},
+                                gauge={
+                                    'axis': {'range': [None, target_high], 'tickwidth': 1},
+                                    'bar': {'color': "darkgray"},
+                                    'steps': [
+                                        {'range': [0, target_low], 'color': "red"},
+                                        {'range': [target_low, target_high], 'color': "lightgreen"}
+                                    ],
+                                    'threshold': {
+                                        'line': {'color': "darkgreen", 'width': 4},
+                                        'thickness': 0.75,
+                                        'value': target_mean
+                                    }
+                                }
+                            ))
+
+                            fig_targets.update_layout(
+                                title="Analyst Price Targets",
+                                height=500,
+                                margin=dict(l=50, r=50, t=50, b=70),
+                            )
+
+                            annotation_text = (
+                                f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
+                                f"Green Line: Average target @ ${target_mean:.2f}<br>"
+                                f"Gray Bar: Current price  @ ${current_price:.2f}"
+                            )
+                            fig_targets.add_annotation(
+                                x=0.5,
+                                y=0,
+                                xref="paper",
+                                yref="paper",
+                                text=annotation_text,
+                                showarrow=False,
+                                font=dict(size=12),
+                                align="left",
+                                xanchor="center",
+                                yanchor="top",
+                                bordercolor="black",
+                                borderwidth=1,
+                                borderpad=10,
+                                bgcolor="white",
+                            )
+
+                            st.plotly_chart(fig_targets, use_container_width=True)
+
+                except Exception as e:
+                    st.error(f"Error fetching analyst ratings: {str(e)}")
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -561,6 +674,7 @@ def main():
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     st.write("Debug information:")
                     st.write(f"Financials: {financials}")
+                    
                 
                 # New section: Intermediate Data for the Calculation
                 st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
@@ -599,6 +713,7 @@ def main():
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
+                    
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
