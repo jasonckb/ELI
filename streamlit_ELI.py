@@ -580,7 +580,7 @@ def main():
                     # Perform DCF Valuation                    
                     fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price)
                     if error_message:
-                        if error_message == "None, Growth rate cannot be estimated due to negative FCF":
+                        if error_message == "Growth rate cannot be estimated due to negative FCF":
                             st.markdown("<p><b>Fair Value:</b> DCF is inapplicable due to negative FCF</p>", unsafe_allow_html=True)
                         else:
                             st.markdown(f"<p><b>Fair Value:</b> Error in calculation - {error_message}</p>", unsafe_allow_html=True)
