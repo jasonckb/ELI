@@ -242,7 +242,7 @@ def get_financial_data(ticker):
     # Balance sheet data
     balance_sheet = stock.balance_sheet
     financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['cash_equivalents'] = balance_sheet.loc['Cash'].iloc[0] if 'Cash' in balance_sheet.index else 0
+    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash, Cash Equivalents & Short Term Investments'].iloc[0] if 'Cash, Cash Equivalents & Short Term Investments' in balance_sheet.index else 0
     financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
     financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
     
@@ -704,7 +704,7 @@ def main():
                 
                 with col4:
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)#
-                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_equivalents'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
                     
