@@ -324,6 +324,11 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
         return None, error_message
     
     fcf = financials['fcf_latest']
+    
+    # Check if FCF is negative
+    if fcf <= 0:
+        return None, "DCF is inapplicable due to negative FCF"
+    
     pv_fcf = 0
     
     # High growth period
@@ -339,11 +344,11 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     enterprise_value = pv_fcf + pv_terminal_value
     
     # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)#- financials['net_debt']      
+    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
     
     # Shares outstanding
     shares_outstanding = financials.get('shares_outstanding')
-    if shares_outstanding is None:
+    if shares_outstanding is None or shares_outstanding <= 0:
         if current_price <= 0:
             return None, "Invalid current price for calculating shares outstanding"
         shares_outstanding = equity_value / current_price
@@ -575,10 +580,11 @@ def main():
                     
                     
                     # Calculate and display FCF Growth Rate
-                    fcf_growth_rate = calculate_fcf_growth_rate(financials)                    
-                    
+                    fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
+
                     # Perform DCF Valuation                    
-                    fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price)
+                    fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
+
                     if error_message:
                         if error_message == "Growth rate cannot be estimated due to negative FCF":
                             st.markdown("<p><b>Fair Value:</b> DCF is inapplicable due to negative FCF</p>", unsafe_allow_html=True)
@@ -592,14 +598,13 @@ def main():
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        # Your existing display code
                         st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
                         if isinstance(fcf_growth_rate, (int, float)):
                             st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate}</p>", unsafe_allow_html=True)
+                            st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_error}</p>", unsafe_allow_html=True)
                         if error_message:
                             st.markdown(f"<p><b>Fair Value:</b> {error_message}</p>", unsafe_allow_html=True)
                         else:
@@ -607,71 +612,90 @@ def main():
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
 
                     with col2:
-                        # New visualization code
-                        df = pd.DataFrame({
-                            'Type': ['Current Price', 'Fair Value'],
-                            'Price': [current_price, fair_value]
-                        })
-                        
-                        diff = fair_value - current_price
-                        dis_percentage = ( 1 - current_price/ fair_value) * 100
-                        pre_percentage = ( current_price/ fair_value - 1) * 100
-                        if diff > 0:
-                            diff_label = f"Discount: {dis_percentage :.1f}%"
-                            color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
+                        if not error_message and isinstance(fair_value, (int, float)):
+                            # Create DataFrame for visualization
+                            df = pd.DataFrame({
+                                'Type': ['Current Price', 'Fair Value'],
+                                'Price': [current_price, fair_value]
+                            })
+                            
+                            # Calculate difference and percentage
+                            diff = fair_value - current_price
+                            percentage_diff = (diff / current_price) * 100
+                            
+                            if diff > 0:
+                                diff_label = f"Undervalued by {abs(percentage_diff):.1f}%"
+                                color_scheme = ['#FF4B4B', '#00CC96']  # Red for current price, green for fair value
+                            else:
+                                diff_label = f"Overvalued by {abs(percentage_diff):.1f}%"
+                                color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
+                            
+                            # Create the bar chart
+                            fig = go.Figure()
+                            
+                            # Calculate the maximum x-axis value to ensure full visibility
+                            max_x = max(fair_value, current_price) * 1.1  # Add 10% padding
+                            
+                            for i, row in df.iterrows():
+                                fig.add_trace(go.Bar(
+                                    x=[row['Price']],
+                                    y=[row['Type']],
+                                    orientation='h',
+                                    marker_color=color_scheme[i],
+                                    text=[f"${row['Price']:.2f}"],
+                                    textposition='auto',
+                                    insidetextanchor='middle',
+                                    textfont=dict(color='white' if row['Price'] / max_x > 0.3 else 'black')
+                                ))
+                            
+                            fig.update_layout(
+                                title=f"Price Comparison<br><sub>{diff_label}</sub>",
+                                xaxis_title="Price ($)",
+                                yaxis_title="",
+                                height=300,
+                                width=400,
+                                margin=dict(l=0, r=50, t=70, b=0),
+                                xaxis=dict(range=[0, max_x]),
+                                barmode='group',
+                                uniformtext=dict(mode='hide', minsize=8),
+                            )
+                            
+                            # Add value labels to the end of each bar if not visible inside
+                            for i, row in df.iterrows():
+                                if row['Price'] / max_x <= 0.3:
+                                    fig.add_annotation(
+                                        x=row['Price'],
+                                        y=row['Type'],
+                                        text=f"${row['Price']:.2f}",
+                                        showarrow=False,
+                                        xanchor='left',
+                                        xshift=5,
+                                        font=dict(color='black')
+                                    )
+                            
+                            # Display the chart
+                            st.plotly_chart(fig)
+                            
+                            # Additional metrics
+                            st.markdown(f"<p><b>Difference:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
+                            st.markdown(f"<p><b>Percentage Difference:</b> {percentage_diff:.2f}%</p>", unsafe_allow_html=True)
+                            
+                            # Recommendation based on the difference
+                            if abs(percentage_diff) < 10:
+                                recommendation = "The stock appears to be fairly valued."
+                            elif diff > 0:
+                                recommendation = "The stock may be undervalued and could be considered for purchase."
+                            else:
+                                recommendation = "The stock may be overvalued and could be considered for sale if owned."
+                            
+                            st.markdown(f"<p><b>Recommendation:</b> {recommendation}</p>", unsafe_allow_html=True)
+                            
                         else:
-                            diff_label = f"Premium: {abs(pre_percentage):.1f}%"
-                            color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
-                        
-                        fig = go.Figure()
-                        
-                        # Calculate the maximum x-axis value to ensure full visibility
-                        max_x = max(fair_value, current_price) * 1.1  # Add 10% padding
-                        
-                        for i, row in df.iterrows():
-                            fig.add_trace(go.Bar(
-                                x=[row['Price']],
-                                y=[row['Type']],
-                                orientation='h',
-                                marker_color=color_scheme[i],
-                                text=[f"${row['Price']:.1f}"],
-                                textposition='auto',
-                                insidetextanchor='middle',
-                                textfont=dict(color='white' if row['Price'] / max_x > 0.3 else 'black')
-                            ))
-                        
-                        fig.update_layout(
-                            title=f"Price Comparison<br><sub>{diff_label}</sub>",
-                            xaxis_title="",
-                            yaxis_title="",
-                            height=300,
-                            width=400,
-                            margin=dict(l=0, r=50, t=40, b=0),
-                            xaxis=dict(range=[0, max_x]),
-                            barmode='group',
-                            uniformtext=dict(mode='hide', minsize=8),
-                        )
-                        
-                        # Add value labels to the end of each bar if not visible inside
-                        for i, row in df.iterrows():
-                            if row['Price'] / max_x <= 0.3:
-                                fig.add_annotation(
-                                    x=row['Price'],
-                                    y=row['Type'],
-                                    text=f"${row['Price']:.2f}",
-                                    showarrow=False,
-                                    xanchor='left',
-                                    xshift=5,
-                                    font=dict(color='black')
-                                )
-                        
-                        st.plotly_chart(fig)
-                                        
-                except Exception as e:
-                    st.error(f"Error calculating DCF valuation: {str(e)}")
-                    st.write("Debug information:")
-                    st.write(f"Financials: {financials}")
-                
+                            st.markdown("<p>Fair value visualization not available due to calculation errors.</p>", unsafe_allow_html=True)
+                            if error_message:
+                                st.markdown(f"<p><b>Error Details:</b> {error_message}</p>", unsafe_allow_html=True)
+                            st.markdown("<p>Please check the input data and ensure all required financial information is available.</p>", unsafe_allow_html=True)
+                                    
                 # New section: Intermediate Data for the Calculation
                 st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
 
