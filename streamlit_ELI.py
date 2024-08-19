@@ -401,7 +401,7 @@ def main():
                 st.markdown("### DCF Model Inputs")
                 market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
                 terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
-                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
+                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate() * 100, step=0.01) / 100
                 high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
 
             with col2:
@@ -418,128 +418,10 @@ def main():
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
                                        strike_price, airbag_price, knockout_price,
                                        strike_name, knockout_name)
-                st.plotly_chart(fig, use_container_width=True)               
+                st.plotly_chart(fig, use_container_width=True)
 
-                st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
-                st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
                 st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
-                try:
-                    stock = yf.Ticker(st.session_state.formatted_ticker)
-                    
-                    if not stock.recommendations_summary.empty:
-                        st.subheader("Recommendation Summary")
-                        summary = stock.recommendations_summary.set_index('period')
-
-                        col1, col2 = st.columns(2)
-
-                        with col1:
-                            fig_summary = go.Figure()
-                            categories = ['strongBuy', 'buy', 'hold', 'sell', 'strongSell']
-                            colors = ['darkgreen', 'lightgreen', 'gray', 'pink', 'red']
-                            period_labels = {
-                                '0m': 'Current Month', '-1m': '1 Month Ago',
-                                '-2m': '2 Months Ago', '-3m': '3 Months Ago'
-                            }
-
-                            for category, color in zip(categories, colors):
-                                fig_summary.add_trace(go.Bar(
-                                    x=[period_labels.get(x, x) for x in summary.index],
-                                    y=summary[category],
-                                    name=category.capitalize(),
-                                    marker_color=color
-                                ))
-
-                            fig_summary.update_layout(
-                                barmode='stack',
-                                title="Analyst Recommendations Over Time",
-                                xaxis_title="Period",
-                                yaxis_title="Number of Recommendations",
-                                legend_title="Recommendation Type",
-                                height=400,
-                                margin=dict(l=50, r=50, t=50, b=70)
-                            )
-
-                            st.plotly_chart(fig_summary, use_container_width=True)
-
-                            # Add rating summary below the chart
-                            latest = summary.iloc[0]
-                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
-                            st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
-                            st.markdown(f"""
-                                <table width="100%">
-                                    <tr>
-                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b>Buy:</b> {latest['buy']}</td>
-                                        <td><b>Hold:</b> {latest['hold']}</td>
-                                        <td><b>Sell:</b> {latest['sell']}</td>
-                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
-                                    </tr>
-                                </table>
-                                """, unsafe_allow_html=True)
-                            st.markdown("</div>", unsafe_allow_html=True)
-
-                        with col2:
-                            price_targets = stock.info
-                            current_price = price_targets.get('currentPrice', 0)
-                            target_low = price_targets.get('targetLowPrice', 0)
-                            target_mean = price_targets.get('targetMeanPrice', 0)
-                            target_high = price_targets.get('targetHighPrice', 0)
-
-                            fig_targets = go.Figure()
-
-                            fig_targets.add_trace(go.Indicator(
-                                mode="number+gauge+delta",
-                                value=current_price,
-                                delta={'reference': target_mean, 'position': "top"},
-                                domain={'x': [0, 1], 'y': [0.25, 1]},
-                                title={'text': "Price Target"},
-                                gauge={
-                                    'axis': {'range': [None, target_high], 'tickwidth': 1},
-                                    'bar': {'color': "darkgray"},
-                                    'steps': [
-                                        {'range': [0, target_low], 'color': "red"},
-                                        {'range': [target_low, target_high], 'color': "lightgreen"}
-                                    ],
-                                    'threshold': {
-                                        'line': {'color': "darkgreen", 'width': 4},
-                                        'thickness': 0.75,
-                                        'value': target_mean
-                                    }
-                                }
-                            ))
-
-                            fig_targets.update_layout(
-                                title="Analyst Price Targets",
-                                height=500,
-                                margin=dict(l=50, r=50, t=50, b=70),
-                            )
-
-                            annotation_text = (
-                                f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
-                                f"Green Line: Average target @ ${target_mean:.2f}<br>"
-                                f"Gray Bar: Current price  @ ${current_price:.2f}"
-                            )
-                            fig_targets.add_annotation(
-                                x=0.5,
-                                y=0,
-                                xref="paper",
-                                yref="paper",
-                                text=annotation_text,
-                                showarrow=False,
-                                font=dict(size=12),
-                                align="left",
-                                xanchor="center",
-                                yanchor="top",
-                                bordercolor="black",
-                                borderwidth=1,
-                                borderpad=10,
-                                bgcolor="white",
-                            )
-
-                            st.plotly_chart(fig_targets, use_container_width=True)
-
-                except Exception as e:
-                    st.error(f"Error fetching analyst ratings: {str(e)}")
+                display_analyst_ratings(st.session_state.formatted_ticker)
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -548,20 +430,17 @@ def main():
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
-                                       
                     
                     # Calculate and display WACC components
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
                     
                     cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
-                    #st.write(f"Cost of Equity: {cost_of_equity:.2%}")
                     
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
                         cost_of_debt = financials['interest_expense'] / financials['total_debt']
                     else:
                         cost_of_debt = risk_free_rate
-                    #st.write(f"Cost of Debt: {cost_of_debt:.2%}")
                     
                     if financials['pre_tax_income'] != 0:
                         tax_rate = financials['income_tax'] / financials['pre_tax_income']
@@ -578,21 +457,11 @@ def main():
                     
                     wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
                     
-                    
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
-
+                    
                     # Perform DCF Valuation                    
                     fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
-
-                    if error_message:
-                        if error_message == "Growth rate cannot be estimated due to negative FCF":
-                            st.markdown("<p><b>Fair Value:</b> DCF is inapplicable due to negative FCF</p>", unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"<p><b>Fair Value:</b> Error in calculation - {error_message}</p>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
-
                     
                     # Display results                  
                     col1, col2 = st.columns(2)
@@ -613,13 +482,11 @@ def main():
 
                     with col2:
                         if not error_message and isinstance(fair_value, (int, float)):
-                            # Create DataFrame for visualization
                             df = pd.DataFrame({
                                 'Type': ['Current Price', 'Fair Value'],
                                 'Price': [current_price, fair_value]
                             })
                             
-                            # Calculate difference and percentage
                             diff = fair_value - current_price
                             percentage_diff = (diff / current_price) * 100
                             
@@ -630,10 +497,8 @@ def main():
                                 diff_label = f"Overvalued by {abs(percentage_diff):.1f}%"
                                 color_scheme = ['#00CC96', '#FF4B4B']  # Green for current price, red for fair value
                             
-                            # Create the bar chart
                             fig = go.Figure()
                             
-                            # Calculate the maximum x-axis value to ensure full visibility
                             max_x = max(fair_value, current_price) * 1.1  # Add 10% padding
                             
                             for i, row in df.iterrows():
@@ -660,7 +525,6 @@ def main():
                                 uniformtext=dict(mode='hide', minsize=8),
                             )
                             
-                            # Add value labels to the end of each bar if not visible inside
                             for i, row in df.iterrows():
                                 if row['Price'] / max_x <= 0.3:
                                     fig.add_annotation(
@@ -673,14 +537,11 @@ def main():
                                         font=dict(color='black')
                                     )
                             
-                            # Display the chart
                             st.plotly_chart(fig)
                             
-                            # Additional metrics
                             st.markdown(f"<p><b>Difference:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
                             st.markdown(f"<p><b>Percentage Difference:</b> {percentage_diff:.2f}%</p>", unsafe_allow_html=True)
                             
-                            # Recommendation based on the difference
                             if abs(percentage_diff) < 10:
                                 recommendation = "The stock appears to be fairly valued."
                             elif diff > 0:
@@ -695,7 +556,12 @@ def main():
                             if error_message:
                                 st.markdown(f"<p><b>Error Details:</b> {error_message}</p>", unsafe_allow_html=True)
                             st.markdown("<p>Please check the input data and ensure all required financial information is available.</p>", unsafe_allow_html=True)
-                                    
+
+                except Exception as e:
+                    st.error(f"Error calculating DCF valuation: {str(e)}")
+                    st.write("Debug information:")
+                    st.write(f"Financials: {financials}")
+                
                 # New section: Intermediate Data for the Calculation
                 st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
 
@@ -733,7 +599,6 @@ def main():
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
-                    
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
