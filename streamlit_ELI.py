@@ -600,8 +600,7 @@ def main():
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
 
                     with col2:
-                        # FCF Trend Chart
-                        st.markdown("<h4>FCF Trend</h4>", unsafe_allow_html=True)
+                        # FCF Trend Chart                        
                         
                         fcf_data = pd.DataFrame({
                             'Year': ['3 years ago', '2 years ago', '1 year ago', 'Latest'],
