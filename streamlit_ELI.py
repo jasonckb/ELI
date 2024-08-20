@@ -249,6 +249,7 @@ def get_financial_data(ticker):
     #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
     financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
     financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
+    financials['share_issued'] = balance_sheet.loc['Share Issued'].iloc[0] if 'Share Issued' in balance_sheet.index else 0
     
     # Income statement data
     income_stmt = stock.financials
@@ -347,7 +348,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
     
     # Shares outstanding
-    shares_outstanding = financials.get('shares_outstanding')
+    shares_outstanding = financials['share_issued'] #financials.get('shares_outstanding')
     if shares_outstanding is None:
         if current_price <= 0:
             return None, "Invalid current price for calculating shares outstanding"
