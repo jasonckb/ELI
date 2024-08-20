@@ -277,9 +277,8 @@ def get_financial_data(ticker):
     financials['shares_outstanding'] = summary_detail[ticker].get('sharesOutstanding')
     financials['market_cap'] = summary_detail[ticker].get('marketCap')
     
-    return financials
-​​​​​​​
-
+    return financial
+    
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     # Cost of Equity
     cost_of_equity = risk_free_rate + beta * market_risk_premium/100
