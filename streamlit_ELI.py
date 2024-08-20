@@ -694,10 +694,12 @@ def main():
                     st.markdown(f"<p><b>Cost of Debt:</b> {cost_of_debt:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Cost of Equity:</b> {cost_of_equity:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Weight of Debt:</b> {weight_of_debt:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
                 
                 with col2:
-                    st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Latest FCF:</b> {format_large_number(financials['fcf_latest'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF 1 year ago:</b> {format_large_number(financials['fcf_1years_ago'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>FCF 2 years ago:</b> {format_large_number(financials['fcf_2years_ago'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF 3 years ago:</b> {format_large_number(financials['fcf_3years_ago'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                 
@@ -706,12 +708,13 @@ def main():
                     st.markdown(f"<p><b>Tax Expense:</b> {format_large_number(financials['income_tax'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Pretax Income:</b> {format_large_number(financials['pre_tax_income'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Total Equity:</b> {format_large_number(financials['total_equity'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
                 
                 with col4:
-                    st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)#
-                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
+                    
+                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)                    
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['share_issued'])}</p>", unsafe_allow_html=True)
+                    
                     
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
