@@ -606,22 +606,40 @@ def main():
                         fcf_data = pd.DataFrame({
                             'Year': ['3 years ago', '2 years ago', '1 year ago', 'Latest'],
                             'FCF': [financials['fcf_3years_ago'], financials['fcf_2years_ago'], 
-                                    financials['fcf_1years_ago'], financials['fcf_latest']]
+                                    financials['fcf_1year_ago'], financials['fcf_latest']]
                         })
                         
+                        # Determine the appropriate scale (B or M) based on the maximum FCF value
+                        max_fcf = np.max(np.abs(fcf_data['FCF']))
+                        if max_fcf >= 1e9:
+                            scale = 1e9
+                            scale_label = 'B'
+                        else:
+                            scale = 1e6
+                            scale_label = 'M'
+                        
+                        # Scale the FCF values
+                        fcf_data['FCF_scaled'] = fcf_data['FCF'] / scale
+                        
                         fig_fcf = go.Figure()
-                        fig_fcf.add_trace(go.Scatter(x=fcf_data['Year'], y=fcf_data['FCF'], mode='lines+markers'))
+                        fig_fcf.add_trace(go.Scatter(
+                            x=fcf_data['Year'], 
+                            y=fcf_data['FCF_scaled'], 
+                            mode='lines+markers',
+                            text=[f'${value:.2f}{scale_label}' for value in fcf_data['FCF_scaled']],
+                            hovertemplate='%{text}<extra></extra>'
+                        ))
                         
                         fig_fcf.update_layout(
                             title="Free Cash Flow (FCF) Trend",
                             xaxis_title="Year",
-                            yaxis_title="FCF ($)",
+                            yaxis_title=f"FCF (${scale_label})",
                             height=300,
                             width=400,
                             margin=dict(l=0, r=0, t=40, b=0),
                         )
                         
-                        fig_fcf.update_yaxes(tickformat="$.2s")
+                        fig_fcf.update_yaxes(tickformat=".2f")
                         
                         st.plotly_chart(fig_fcf)
 
