@@ -711,7 +711,7 @@ def main():
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)#
                     st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['share_issued'])}</p>", unsafe_allow_html=True)
                     
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
