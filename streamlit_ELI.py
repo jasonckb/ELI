@@ -606,7 +606,7 @@ def main():
                         fcf_data = pd.DataFrame({
                             'Year': ['3 years ago', '2 years ago', '1 year ago', 'Latest'],
                             'FCF': [financials['fcf_3years_ago'], financials['fcf_2years_ago'], 
-                                    financials['fcf_1year_ago'], financials['fcf_latest']]
+                                    financials['fcf_1years_ago'], financials['fcf_latest']]
                         })
                         
                         # Determine the appropriate scale (B or M) based on the maximum FCF value
