@@ -235,44 +235,50 @@ def get_risk_free_rate():
     except:
         return 0.035  # Default to 3.5% if unable to fetch
     
-    
+
 def get_financial_data(ticker):
-    stock = yf.Ticker(ticker)
+    yf = YahooFinancials(ticker)
     financials = {}
     
-    # Balance sheet data
-    balance_sheet = stock.balance_sheet
-    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash and Cash Equivalents '].iloc[0] if 'Cash and Cash Equivalents' in balance_sheet.index else 0
-    financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
+    balance_sheet = yf.get_financial_stmts('annual', 'balance')['balanceSheetHistory'][ticker][0]
+    income_stmt = yf.get_financial_stmts('annual', 'income')['incomeStatementHistory'][ticker][0]
+    cash_flow = yf.get_financial_stmts('annual', 'cash')['cashflowStatementHistory'][ticker][0]
     
-    # Income statement data
-    income_stmt = stock.financials
-    financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-    financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
-    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
+    most_recent_year = list(balance_sheet.keys())[0]
     
-    # Cash flow statement data
-    cash_flow = stock.cashflow
-    if 'Free Cash Flow' in cash_flow.index:
-        financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-        financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1]
-        financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2]
-        financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
-    else:
-        # If Free Cash Flow is not available, calculate it
-        operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-        capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
-        financials['fcf_latest'] = operating_cash_flow - capital_expenditures
-        financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
-
-    # Additional info
-    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
-    financials['market_cap'] = stock.info.get('marketCap')
+    bs_data = balance_sheet[most_recent_year]
+    financials['total_debt'] = bs_data.get('totalDebt', 0)
+    financials['cash_and_cash_equivalents'] = bs_data.get('cashAndCashEquivalents', 0)
+    financials['total_equity'] = bs_data.get('totalStockholderEquity', 0)
+    financials['net_debt'] = financials['total_debt'] - financials['cash_and_cash_equivalents']
+    
+    is_data = income_stmt[most_recent_year]
+    financials['interest_expense'] = abs(is_data.get('interestExpense', 0))
+    financials['income_tax'] = is_data.get('incomeTaxExpense', 0)
+    financials['net_income'] = is_data.get('netIncome', 0)
+    financials['pre_tax_income'] = is_data.get('incomeBeforeTax', financials['net_income'] + financials['income_tax'])
+    
+    cf_data = cash_flow[most_recent_year]
+    operating_cash_flow = cf_data.get('totalCashFromOperatingActivities', 0)
+    capital_expenditures = abs(cf_data.get('capitalExpenditures', 0))
+    financials['fcf_latest'] = operating_cash_flow - capital_expenditures
+    
+    historical_cash_flow = yf.get_historical_price_data('1900-01-01', '2100-12-31', 'annual')
+    if historical_cash_flow and ticker in historical_cash_flow:
+        annual_cash_flow = historical_cash_flow[ticker]['annualFreeCashFlow']
+        if len(annual_cash_flow) > 1:
+            financials['fcf_1years_ago'] = annual_cash_flow[-2]['fcf']
+        if len(annual_cash_flow) > 2:
+            financials['fcf_2years_ago'] = annual_cash_flow[-3]['fcf']
+        if len(annual_cash_flow) > 3:
+            financials['fcf_3years_ago'] = annual_cash_flow[-4]['fcf']
+    
+    summary_detail = yf.get_summary_data()
+    financials['shares_outstanding'] = summary_detail[ticker].get('sharesOutstanding')
+    financials['market_cap'] = summary_detail[ticker].get('marketCap')
     
     return financials
+```​​​​​​​​​​​​​​​​
 
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     # Cost of Equity
@@ -705,7 +711,7 @@ def main():
                 
                 with col4:
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)#
-                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number('cash_and_cash_equivalents')}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Net Debt:</b> {format_large_number(financials['net_debt'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['shares_outstanding'])}</p>", unsafe_allow_html=True)
                     
