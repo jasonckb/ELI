@@ -254,11 +254,8 @@ def get_financial_data(ticker):
     # Income statement data
     income_stmt = stock.financials
     financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-    financials['income_tax_latest'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
+    financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
     financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['net_income_1years_ago'] = income_stmt.loc['Net Income'].iloc[1] if 'Net Income' in income_stmt.index else 0
-    financials['net_income_2years_ago'] = income_stmt.loc['Net Income'].iloc[2] if 'Net Income' in income_stmt.index else 0
-    financials['net_income_3years_ago'] = income_stmt.loc['Net Income'].iloc[3] if 'Net Income' in income_stmt.index else 0
     financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
     
     # Cash flow statement data
@@ -586,7 +583,7 @@ def main():
                     fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
                     
                     # Display results                  
-                    col1, col2, col3, col3 = st.columns(4)
+                    col1, col2, col3 = st.columns(3)
 
                     with col1:
                         st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
@@ -646,49 +643,6 @@ def main():
                         st.plotly_chart(fig_fcf)
 
                     with col3:
-                        # NI Trend Chart                        
-                        
-                        NI_data = pd.DataFrame({
-                            'Year': ['3 years ago', '2 years ago', '1 year ago', 'Latest'],
-                            'NI': [financials['net_income_3years_ago'], financials['net_income_2years_ago'], 
-                                    financials['net_income_1years_ago'], financials['net_income_latest']]
-                        })
-                        
-                        # Determine the appropriate scale (B or M) based on the maximum FCF value
-                        max_NI = np.max(np.abs(NI_data['NI']))
-                        if max_NI >= 1e9:
-                            scale = 1e9
-                            scale_label = 'B'
-                        else:
-                            scale = 1e6
-                            scale_label = 'M'
-                        
-                        # Scale the FCF values
-                        NI_data['NI_scaled'] = fcf_data['NI'] / scale
-                        
-                        fig_NI = go.Figure()
-                        fig_NI.add_trace(go.Scatter(
-                            x=NI_data['Year'], 
-                            y=NI_data['NI_scaled'], 
-                            mode='lines+markers',
-                            text=[f'${value:.2f}{scale_label}' for value in fcf_data['NI_scaled']],
-                            hovertemplate='%{text}<extra></extra>'
-                        ))
-                        
-                        fig_NI.update_layout(
-                            title="Net Income Trend",
-                            xaxis_title="Year",
-                            yaxis_title=f"NI (${scale_label})",
-                            height=300,
-                            width=400,
-                            margin=dict(l=0, r=0, t=40, b=0),
-                        )
-                        
-                        fig_fcf.update_yaxes(tickformat=".2f")
-                        
-                        st.plotly_chart(fig_NI)
-
-                    with col4:
                         if not error_message and isinstance(fair_value, (int, float)):
                             df = pd.DataFrame({
                                 'Type': ['Current Price', 'Fair Value'],
@@ -776,7 +730,7 @@ def main():
                         return f"${number:,.2f}"
                     
                 # Create 4 columns for intermediate data
-                col1, col2, col3, col4, col5= st.columns(5)
+                col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
                     st.markdown(f"<p><b>Tax Rate:</b> {tax_rate:.2%}</p>", unsafe_allow_html=True)
@@ -784,29 +738,22 @@ def main():
                     st.markdown(f"<p><b>Cost of Equity:</b> {cost_of_equity:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Weight of Debt:</b> {weight_of_debt:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
-
-                with col2:
-                    st.markdown(f"<p><b>Latest Net Income:</b> {format_large_number(financials['net_income_latest'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Net Income 1 year ago:</b> {format_large_number(financials['net_income__1years_ago'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Net Income2 years ago:</b> {format_large_number(financials['net_income__2years_ago'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Net Income 3 years ago:</b> {format_large_number(financials['net_income__3years_ago'])}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<p><b>Net Income Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)    
                 
-                with col3:
+                with col2:
                     st.markdown(f"<p><b>Latest FCF:</b> {format_large_number(financials['fcf_latest'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF 1 year ago:</b> {format_large_number(financials['fcf_1years_ago'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF 2 years ago:</b> {format_large_number(financials['fcf_2years_ago'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>FCF 3 years ago:</b> {format_large_number(financials['fcf_3years_ago'])}</p>", unsafe_allow_html=True)
-                    
+                    st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
                 
-                with col4:
+                with col3:
                     st.markdown(f"<p><b>Interest Expense:</b> {format_large_number(financials['interest_expense'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Tax Expense:</b> {format_large_number(financials['income_tax'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Pretax Income:</b> {format_large_number(financials['pre_tax_income'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Total Equity:</b> {format_large_number(financials['total_equity'])}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
                 
-                with col5:                    
+                with col4:                    
                     st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)                    
                     st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['share_issued'])}</p>", unsafe_allow_html=True)
                     
