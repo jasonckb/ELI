@@ -243,7 +243,7 @@ def get_financial_data(ticker):
     # Balance sheet data
     balance_sheet = stock.balance_sheet
     financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash and Cash Equivalents '].iloc[0] if 'Cash and Cash Equivalents' in balance_sheet.index else 0
+    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash And Cash Equivalents '].iloc[0] if 'Cash And Cash Equivalents' in balance_sheet.index else 0
     financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
     financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
     
