@@ -343,7 +343,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     enterprise_value = pv_fcf + pv_terminal_value
     
     # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash', 0)
+    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
     
     # Shares outstanding
     shares_outstanding = financials.get('shares_outstanding')
