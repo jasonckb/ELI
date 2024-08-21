@@ -613,7 +613,7 @@ def main():
                         valuation_method = "Excess Return Model (for Financial company)"
                     else:
                         fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
-                        valuation_method = "Discounted Cash Flow (DCF) Model"
+                        valuation_method = "Discounted Cash Flow (DCF) Model (Inapplicable to Negative FCF)"
                     
                    
                     st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
