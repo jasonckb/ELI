@@ -568,11 +568,15 @@ def main():
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
-                # New section for DCF Model
-                st.markdown("<h3>Fair Value by Discounted Cash Flow (DCF) Model: (Not Suitable for Financial & Negative FCF Stock) </h3>", unsafe_allow_html=True)
+                # New section for Valuation Model
+                st.markdown("<h3>Fair Value Calculation</h3>", unsafe_allow_html=True)
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
+                    
+                    # Get sector information
+                    metrics = get_financial_metrics(st.session_state.formatted_ticker)
+                    sector = metrics.get("Sector", "Unknown")
                     
                     # Calculate and display WACC components
                     stock = yf.Ticker(st.session_state.formatted_ticker)
@@ -603,8 +607,19 @@ def main():
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
                     
-                    # Perform DCF Valuation                    
-                    fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
+                    # Perform Valuation based on sector
+                    if sector == 'Financial Services':
+                        fair_value, error_message = calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate/100)
+                        valuation_method = "Excess Return Model (for Financial company)"
+                    else:
+                        fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
+                        valuation_method = "Discounted Cash Flow (DCF) Model"
+                    
+                    # Display results
+                    if sector == 'Financial Services':
+                        st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<h4>Fair Value by Discounted Cash Flow (DCF) Model: (Not Suitable for Financial & Negative FCF Stock)</h4>", unsafe_allow_html=True)
                     
                     # Display results                  
                     col1, col2, col3 = st.columns(3)
