@@ -239,44 +239,45 @@ def get_risk_free_rate():
         return 0.035  # Default to 3.5% if unable to fetch
     
 
+from yahoofinancials import YahooFinancials
+
 def get_financial_data(ticker):
     stock = yf.Ticker(ticker)
+    yahoo_financials = YahooFinancials(ticker, flat_format=True)
     financials = {}
     
     # Balance sheet data
-    balance_sheet = stock.balance_sheet
-    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
-    financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
-    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
-    #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
-    financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
-    financials['share_issued'] = yf.Ticker(ticker).info.get("sharesOutstanding", "N/A")#balance_sheet.loc['Share Issued'].iloc[0] if 'Share Issued' in balance_sheet.index else 0
+    balance_sheet = yahoo_financials.get_financial_stmts('annual', 'balance')
+    latest_balance_sheet = balance_sheet['balanceSheetHistory'][ticker][0]
+    
+    financials['total_debt'] = latest_balance_sheet.get('TotalDebt', 0)
+    financials['cash_and_cash_equivalents'] = latest_balance_sheet.get('CashAndCashEquivalents', 0)
+    financials['total_equity'] = latest_balance_sheet.get('TotalStockholderEquity', 0)
+    financials['share_issued'] = latest_balance_sheet.get('ShareIssued', 0)
     
     # Income statement data
-    income_stmt = stock.financials
-    financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-    financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
-    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
+    income_stmt = yahoo_financials.get_financial_stmts('annual', 'income')
+    latest_income_stmt = income_stmt['incomeStatementHistory'][ticker][0]
+    
+    financials['interest_expense'] = abs(latest_income_stmt.get('InterestExpense', 0))
+    financials['income_tax'] = latest_income_stmt.get('TaxProvision', 0)
+    financials['net_income'] = latest_income_stmt.get('NetIncome', 0)
+    financials['pre_tax_income'] = latest_income_stmt.get('IncomeBeforeTax', 0)
     
     # Cash flow statement data
-    cash_flow = stock.cashflow
-    if 'Free Cash Flow' in cash_flow.index:
-        financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-        financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1]
-        financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2]
-        financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
-    else:
-        # If Free Cash Flow is not available, calculate it
-        operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-        capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
-        financials['fcf_latest'] = operating_cash_flow - capital_expenditures
-        financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
-
+    cash_flow = yahoo_financials.get_financial_stmts('annual', 'cash')
+    latest_cash_flow = cash_flow['cashflowStatementHistory'][ticker][0]
+    
+    financials['fcf_latest'] = latest_cash_flow.get('FreeCashFlow', 0)
+    
+    # Get historical FCF data
+    historical_cash_flow = cash_flow['cashflowStatementHistory'][ticker]
+    financials['fcf_1years_ago'] = historical_cash_flow[1].get('FreeCashFlow', 0) if len(historical_cash_flow) > 1 else None
+    financials['fcf_2years_ago'] = historical_cash_flow[2].get('FreeCashFlow', 0) if len(historical_cash_flow) > 2 else None
+    financials['fcf_3years_ago'] = historical_cash_flow[3].get('FreeCashFlow', 0) if len(historical_cash_flow) > 3 else None
+    
     # Additional info
-    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
+    financials['shares_outstanding'] = financials['share_issued']  # Using ShareIssued as shares outstanding
     financials['market_cap'] = stock.info.get('marketCap')
     
     return financials
