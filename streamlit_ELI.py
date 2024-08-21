@@ -615,11 +615,9 @@ def main():
                         fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
                         valuation_method = "Discounted Cash Flow (DCF) Model"
                     
-                    # Display results
-                    if sector == 'Financial Services':
-                        st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<h4>Fair Value by Discounted Cash Flow (DCF) Model: (Not Suitable for Financial & Negative FCF Stock)</h4>", unsafe_allow_html=True)
+                   
+                    st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
+                    
                     
                     # Display results                  
                     col1, col2, col3 = st.columns(3)
