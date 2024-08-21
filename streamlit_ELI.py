@@ -192,7 +192,10 @@ def get_financial_metrics(ticker):
     info = stock.info
     
     metrics = {
-        "Market Cap": info.get("marketCap", "N/A"),       
+        "Sector": info.get("sector", "N/A"),
+        "Industry": info.get("industry", "N/A"),
+        "Market Cap": info.get("marketCap", "N/A"),
+        "Outstanding Shares": info.get("shares_outstanding", "N/A"),       
         "Historical P/E": info.get("trailingPE", "N/A"),
         "Forward P/E": info.get("forwardPE", "N/A"),
         "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
