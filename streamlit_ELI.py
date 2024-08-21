@@ -338,7 +338,7 @@ def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_grow
         net_income = financials['net_income']
         shares_outstanding = financials['share_issued']
 
-        roe = yf.Ticker(ticker).info.get("returnOnEquity")
+        roe = net_income / book_value
         excess_return = (roe - cost_of_equity) * book_value
         terminal_value = excess_return * (1 + terminal_growth_rate) / (cost_of_equity - terminal_growth_rate)
         equity_value = book_value + terminal_value
