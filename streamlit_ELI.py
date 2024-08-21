@@ -252,7 +252,7 @@ def get_financial_data(ticker):
     #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
     financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
     financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
-    financials['share_issued'] = info.get("sharesOutstanding", "N/A")#balance_sheet.loc['Share Issued'].iloc[0] if 'Share Issued' in balance_sheet.index else 0
+    financials['share_issued'] = yf.Ticker(ticker).info.get("sharesOutstanding", "N/A")#balance_sheet.loc['Share Issued'].iloc[0] if 'Share Issued' in balance_sheet.index else 0
     
     # Income statement data
     income_stmt = stock.financials
