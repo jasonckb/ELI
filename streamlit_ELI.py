@@ -208,7 +208,7 @@ def get_financial_metrics(ticker):
     }
     
     # Format large numbers
-    for key in ["Market Cap", "Net Income", "Revenue"]:
+    for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
         if isinstance(metrics[key], (int, float)):
             if abs(metrics[key]) >= 1e12:
                 metrics[key] = f"{metrics[key]/1e12:.2f}T"
