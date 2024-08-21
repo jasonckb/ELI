@@ -571,7 +571,34 @@ def main():
                 # New section for DCF Model
                 st.markdown("<h3>Fair Value by Discounted Cash Flow (DCF) Model: (Not Suitable for Financial & Negative FCF Stock) </h3>", unsafe_allow_html=True)
                 try:
+                    # Fetch required financial data
+                    financials = get_financial_data(st.session_state.formatted_ticker)
                     
+                    # Calculate and display WACC components
+                    stock = yf.Ticker(st.session_state.formatted_ticker)
+                    beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
+                    
+                    cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
+                    
+                    if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
+                        cost_of_debt = financials['interest_expense'] / financials['total_debt']
+                    else:
+                        cost_of_debt = risk_free_rate
+                    
+                    if financials['pre_tax_income'] != 0:
+                        tax_rate = financials['income_tax'] / financials['pre_tax_income']
+                    else:
+                        tax_rate = 0.21  # Assume a default corporate tax rate of 21%                    
+                    
+                    total_capital = financials['total_debt'] + financials['total_equity']
+                    if total_capital != 0:
+                        weight_of_debt = financials['total_debt'] / total_capital
+                        weight_of_equity = financials['total_equity'] / total_capital
+                    else:
+                        weight_of_debt = 0
+                        weight_of_equity = 1                    
+                    
+                    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
                     
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
