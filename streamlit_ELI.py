@@ -326,6 +326,28 @@ def calculate_fcf_growth_rate(financials):
     else:
         return None, "Growth rate cannot be estimated due to negative FCF"
 
+def calculate_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price, sector):
+    if sector == 'Financial Services':
+        return calculate_excess_return_fair_value(financials, wacc, terminal_growth_rate)
+    else:
+        return calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price)
+
+def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
+    try:
+        book_value = financials['total_equity']
+        net_income = financials['net_income']
+        shares_outstanding = financials['share_issued']
+
+        roe = net_income / book_value
+        excess_return = (roe - cost_of_equity) * book_value
+        terminal_value = excess_return * (1 + terminal_growth_rate) / (cost_of_equity - terminal_growth_rate)
+        equity_value = book_value + terminal_value
+        fair_value = equity_value / shares_outstanding
+
+        return fair_value, None
+    except Exception as e:
+        return None, f"Error in excess return calculation: {str(e)}"
+
 def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price):
     fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
     
@@ -351,7 +373,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
     
     # Shares outstanding
-    shares_outstanding = financials['share_issued'] #financials.get('shares_outstanding')
+    shares_outstanding = financials['share_issued']
     if shares_outstanding is None:
         if current_price <= 0:
             return None, "Invalid current price for calculating shares outstanding"
@@ -361,7 +383,6 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     fair_value = equity_value / shares_outstanding
     
     return fair_value, None
-
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
 
@@ -550,34 +571,7 @@ def main():
                 # New section for DCF Model
                 st.markdown("<h3>Fair Value by Discounted Cash Flow (DCF) Model: (Not Suitable for Financial & Negative FCF Stock) </h3>", unsafe_allow_html=True)
                 try:
-                    # Fetch required financial data
-                    financials = get_financial_data(st.session_state.formatted_ticker)
                     
-                    # Calculate and display WACC components
-                    stock = yf.Ticker(st.session_state.formatted_ticker)
-                    beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
-                    
-                    cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
-                    
-                    if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
-                        cost_of_debt = financials['interest_expense'] / financials['total_debt']
-                    else:
-                        cost_of_debt = risk_free_rate
-                    
-                    if financials['pre_tax_income'] != 0:
-                        tax_rate = financials['income_tax'] / financials['pre_tax_income']
-                    else:
-                        tax_rate = 0.21  # Assume a default corporate tax rate of 21%                    
-                    
-                    total_capital = financials['total_debt'] + financials['total_equity']
-                    if total_capital != 0:
-                        weight_of_debt = financials['total_debt'] / total_capital
-                        weight_of_equity = financials['total_equity'] / total_capital
-                    else:
-                        weight_of_debt = 0
-                        weight_of_equity = 1                    
-                    
-                    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
                     
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
