@@ -326,11 +326,6 @@ def calculate_fcf_growth_rate(financials):
     else:
         return None, "Growth rate cannot be estimated due to negative FCF"
 
-def calculate_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price, sector):
-    if sector == 'Financial Services':
-        return calculate_excess_return_fair_value(financials, wacc, terminal_growth_rate)
-    else:
-        return calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price)
 
 def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
     try:
