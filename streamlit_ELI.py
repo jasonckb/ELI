@@ -758,7 +758,7 @@ def main():
                 
                 with col4:                    
                     st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)                    
-                    st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['share_issued'])}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number("Outstanding Shares")}</p>", unsafe_allow_html=True)
                     
                     
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
