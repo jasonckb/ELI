@@ -772,7 +772,7 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.markdown(f"<p><b>ROE:</b> {roe:.2%}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p><b>ROE:</b> {roe}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Cost of Debt:</b> {cost_of_debt:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Cost of Equity:</b> {cost_of_equity:.2%}</p>", unsafe_allow_html=True)
                     st.markdown(f"<p><b>Weight of Debt:</b> {weight_of_debt:.2%}</p>", unsafe_allow_html=True)
