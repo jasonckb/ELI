@@ -247,11 +247,21 @@ def get_stock_info(symbol):
             'pe': None,
             'roe': None
         }
-
-import numpy as np
-
+    
 def simplify_industry(industry):
-    return industry.split('-')[0].strip() if '-' in industry else industry
+    if not industry or industry == 'Unknown':
+        return 'Unknown'
+    
+    # Split the industry name and take the first part
+    main_industry = industry.split('-')[0].strip()
+    
+    # Remove common suffixes
+    suffixes_to_remove = [' Group', ' Services', ' Service', ' Companies', ' Company']
+    for suffix in suffixes_to_remove:
+        if main_industry.endswith(suffix):
+            main_industry = main_industry[:-len(suffix)]
+    
+    return main_industry.strip()
 
 def calculate_industry_averages(stocks_data, target_industry):
     print(f"Calculating averages for industry: {target_industry}")
@@ -259,7 +269,7 @@ def calculate_industry_averages(stocks_data, target_industry):
     
     simplified_target = simplify_industry(target_industry)
     industry_stocks = [stock for stock in stocks_data if simplify_industry(stock['industry']) == simplified_target]
-    print(f"Stocks in target industry: {len(industry_stocks)}")
+    print(f"Stocks in target industry '{simplified_target}': {len(industry_stocks)}")
     
     if not industry_stocks:
         print(f"No stocks found for industry: {simplified_target}")
@@ -279,7 +289,7 @@ def calculate_industry_averages(stocks_data, target_industry):
     min_roe = min(valid_roe) if valid_roe else None
     max_roe = max(valid_roe) if valid_roe else None
     
-    print(f"Calculated averages: PE={avg_pe:.2f if avg_pe else 'N/A'}, ROE={avg_roe:.2f if avg_roe else 'N/A'}")
+    print(f"Calculated averages for '{simplified_target}': PE={avg_pe:.2f if avg_pe else 'N/A'}, ROE={avg_roe:.2f if avg_roe else 'N/A'}")
     
     return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
@@ -517,10 +527,10 @@ def main():
                 print(f"Target stock industry: {target_stock['industry']}")
 
                 if target_stock['industry'] != 'Unknown':
+                    simplified_industry = simplify_industry(target_stock['industry'])
                     avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
                     
                     if avg_pe is not None and avg_roe is not None:
-                        simplified_industry = simplify_industry(target_stock['industry'])
                         st.session_state.industry_averages = {
                             'avg_pe': avg_pe,
                             'avg_roe': avg_roe,
@@ -534,13 +544,12 @@ def main():
                         }
                         print(f"Industry averages calculated and stored for {simplified_industry}")
                     else:
-                        print(f"Failed to calculate industry averages for {target_stock['industry']}")
-                        st.warning(f"Unable to calculate industry averages for {target_stock['industry']}")
+                        print(f"Failed to calculate industry averages for {simplified_industry}")
+                        st.warning(f"Unable to calculate industry averages for {simplified_industry}")
                 else:
                     st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
 
-        except Exception as e:
-            st.error(f"Error fetching data: {str(e)}")
+                        
 
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
@@ -773,7 +782,7 @@ def main():
                             st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Historical PE:</b> {pe:.2f}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Historical ROE:</b> {roe:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical ROE:</b> ${roe:.2%}</p>", unsafe_allow_html=True)
 
 
                     with col2:
