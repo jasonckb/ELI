@@ -436,23 +436,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     return fair_value, None
 
 def main():
-    st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
-
-    # Create two columns for layout
-    col1, col2 = st.columns([1, 4])
-
-    # Sidebar inputs (now in the first column)
-    with col1:
-        ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
-        
-        knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
-        strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
-        
-        knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
-        strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
-        airbag_pct = st.number_input("Airbag Price %:", value=0.0)
-               
-        refresh = st.button("Refresh Data")
+    # ... [previous code remains unchanged]
 
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
         st.session_state.formatted_ticker = format_ticker(ticker)
@@ -469,12 +453,16 @@ def main():
                 
                 target_stock = get_stock_info(st.session_state.formatted_ticker)
                 if target_stock['industry'] != 'Unknown':
-                    avg_pe, avg_roe, industry_count = calculate_industry_averages(stocks_data, target_stock['industry'])
+                    avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
                     st.session_state.industry_averages = {
                         'avg_pe': avg_pe,
                         'avg_roe': avg_roe,
                         'industry': target_stock['industry'],
-                        'count': industry_count
+                        'count': industry_count,
+                        'min_pe': min_pe,
+                        'max_pe': max_pe,
+                        'min_roe': min_roe,
+                        'max_roe': max_roe
                     }
                 else:
                     st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
@@ -720,10 +708,12 @@ def main():
                             st.markdown(f"Number of companies: {st.session_state.industry_averages['count']}")
                             if st.session_state.industry_averages['avg_pe']:
                                 st.markdown(f"Average P/E: {st.session_state.industry_averages['avg_pe']:.2f}")
+                                st.markdown(f"P/E Range: {st.session_state.industry_averages['min_pe']:.2f} - {st.session_state.industry_averages['max_pe']:.2f}")
                             else:
                                 st.markdown("Average P/E: N/A")
                             if st.session_state.industry_averages['avg_roe']:
                                 st.markdown(f"Average ROE: {st.session_state.industry_averages['avg_roe']:.2%}")
+                                st.markdown(f"ROE Range: {st.session_state.industry_averages['min_roe']:.2%} - {st.session_state.industry_averages['max_roe']:.2%}")
                             else:
                                 st.markdown("Average ROE: N/A")
 
@@ -832,7 +822,7 @@ def main():
                             st.markdown(f"<p><b>Difference with Fair Value:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
                             
                         else:
-                            st.markdown("<p>Fair value cannot be estimated due to negative FCF.</p>", unsafe_allow_html=True)
+                            st.markdown("<p>Negative FCF.</p>", unsafe_allow_html=True)
                             if error_message:
                                 st.markdown(f"<p><b>Error Details:</b> {error_message}</p>", unsafe_allow_html=True)
                             st.markdown("<p>Please check the input data and ensure all required financial information is available.</p>", unsafe_allow_html=True)
