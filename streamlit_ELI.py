@@ -443,14 +443,12 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
 
-    # Move ticker input to the top
-    ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
-
     # Create two columns for layout
     col1, col2 = st.columns([1, 4])
 
     # Sidebar inputs (now in the first column)
     with col1:
+        ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
         knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
         strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
         
