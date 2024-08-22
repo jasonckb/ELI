@@ -188,6 +188,8 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 
     return fig
 
+import pandas as pd
+
 def get_index_constituents(ticker):
     if ticker.isdigit():
         # Hong Kong stocks
@@ -209,10 +211,18 @@ def get_index_constituents(ticker):
             df = tables[0]  # S&P 500 constituents are in the first table
             constituents = df['Symbol'].tolist()
         
+        print(f"Fetched {len(constituents)} constituents for {index_name}")
         return constituents, index_name
     except Exception as e:
         print(f"Error fetching constituents for {index_name}: {str(e)}")
         return [], index_name
+
+# Helper function to format tickers for Yahoo Finance
+def format_ticker(ticker):
+    if ticker.isdigit():
+        return f"{int(ticker):04d}.HK"
+    else:
+        return ticker.upper()
 
 def get_stock_info(symbol):
     try:
