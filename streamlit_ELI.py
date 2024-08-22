@@ -549,7 +549,8 @@ def main():
                 else:
                     st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
 
-                        
+        except Exception as e:
+            st.error(f"Error fetching data: {str(e)}")
 
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
