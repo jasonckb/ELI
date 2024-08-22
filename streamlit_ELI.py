@@ -201,9 +201,10 @@ def get_index_constituents(ticker):
     try:
         tables = pd.read_html(url)
         if ticker.isdigit():
-            df = tables[1]  # Hang Seng Index constituents are in the second table
-            constituents = df['Code'].tolist()
-            constituents = [f"{int(code):04d}.HK" for code in constituents]  # Format as ####.HK
+            df = tables[1]  # HSI constituents are in the second table
+            constituents = df['Ticker'].tolist()
+            # Remove 'SEHK:' prefix and format as ####.HK
+            constituents = [f"{int(code.split(':')[1]):04d}.HK" for code in constituents]
         else:
             df = tables[0]  # S&P 500 constituents are in the first table
             constituents = df['Symbol'].tolist()
