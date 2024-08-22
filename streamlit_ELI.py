@@ -849,7 +849,7 @@ def main():
                                 yaxis_title="",
                                 height=300,
                                 width=400,
-                                margin=dict(l=0, r=50, t=70, b=0),
+                                margin=dict(l=0, r=50, t=40, b=0),
                                 xaxis=dict(range=[0, max_x]),
                                 barmode='group',
                                 uniformtext=dict(mode='hide', minsize=8),
