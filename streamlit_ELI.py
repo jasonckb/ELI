@@ -188,7 +188,6 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 
     return fig
 
-dimport pandas as pd
 
 def get_index_constituents(ticker):
     if ticker.isdigit():
