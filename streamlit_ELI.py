@@ -514,22 +514,30 @@ def main():
                         stocks_data = list(executor.map(get_stock_info, constituents))
                 
                 target_stock = get_stock_info(st.session_state.formatted_ticker)
+                print(f"Target stock industry: {target_stock['industry']}")
+
                 if target_stock['industry'] != 'Unknown':
                     avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
-                    st.session_state.industry_averages = {
-                        'avg_pe': avg_pe,
-                        'avg_roe': avg_roe,
-                        'industry': target_stock['industry'],
-                        'count': industry_count,
-                        'min_pe': min_pe,
-                        'max_pe': max_pe,
-                        'min_roe': min_roe,
-                        'max_roe': max_roe
-                    }
+                    
+                    if avg_pe is not None and avg_roe is not None:
+                        simplified_industry = simplify_industry(target_stock['industry'])
+                        st.session_state.industry_averages = {
+                            'avg_pe': avg_pe,
+                            'avg_roe': avg_roe,
+                            'industry': simplified_industry,  # Store the simplified industry name
+                            'original_industry': target_stock['industry'],  # Store the original industry name as well
+                            'count': industry_count,
+                            'min_pe': min_pe,
+                            'max_pe': max_pe,
+                            'min_roe': min_roe,
+                            'max_roe': max_roe
+                        }
+                        print(f"Industry averages calculated and stored for {simplified_industry}")
+                    else:
+                        print(f"Failed to calculate industry averages for {target_stock['industry']}")
+                        st.warning(f"Unable to calculate industry averages for {target_stock['industry']}")
                 else:
                     st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
-            else:
-                st.warning(f"Unable to fetch constituents for {index_name}")
 
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
