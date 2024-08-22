@@ -745,7 +745,7 @@ def main():
                         else:
                             st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Historical PE:</b> ${pe:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> ${pe:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Historical ROE:</b> ${roe:.2%}</p>", unsafe_allow_html=True)
 
 
