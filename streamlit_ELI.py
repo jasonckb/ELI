@@ -188,7 +188,7 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 
     return fig
 
-import pandas as pd
+dimport pandas as pd
 
 def get_index_constituents(ticker):
     if ticker.isdigit():
@@ -203,15 +203,21 @@ def get_index_constituents(ticker):
     try:
         tables = pd.read_html(url)
         if ticker.isdigit():
-            df = tables[1]  # HSI constituents are in the second table
-            constituents = df['Ticker'].tolist()
-            # Remove 'SEHK:' prefix and format as ####.HK
-            constituents = [f"{int(code.split(':')[1]):04d}.HK" for code in constituents]
+            # Look for the table with 'Ticker' and 'Sub-index' columns
+            for df in tables:
+                if 'Ticker' in df.columns and 'Sub-index' in df.columns:
+                    constituents = df['Ticker'].tolist()
+                    # Remove 'SEHK:' prefix and format as ####.HK
+                    constituents = [f"{int(code.split(':')[1]):04d}.HK" for code in constituents]
+                    break
+            else:
+                raise ValueError("Could not find the correct table for HSI constituents")
         else:
             df = tables[0]  # S&P 500 constituents are in the first table
             constituents = df['Symbol'].tolist()
         
         print(f"Fetched {len(constituents)} constituents for {index_name}")
+        print(f"First few constituents: {constituents[:5]}")
         return constituents, index_name
     except Exception as e:
         print(f"Error fetching constituents for {index_name}: {str(e)}")
