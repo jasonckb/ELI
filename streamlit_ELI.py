@@ -552,7 +552,7 @@ def main():
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
                 st.info(f"You can try visiting this URL directly for news: https://finance.yahoo.com/quote/{st.session_state.formatted_ticker}/news/")
-                st.markdown("<h3>Analyst Ratings:</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3>Analyst Ratings - {ticker} :</h3>", unsafe_allow_html=True)
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     
@@ -674,7 +674,7 @@ def main():
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 # New section for Valuation Model
-                st.markdown(f"<h3>{ticker} Fair Value Calculation</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3>Fair Value Calculation - {ticker} </h3>", unsafe_allow_html=True)
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
