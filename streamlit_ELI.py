@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 import plotly.io as pio
 import os
 from yahoofinancials import YahooFinancials
+from concurrent.futures import ThreadPoolExecutor
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -186,6 +187,49 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
     )
 
     return fig
+
+def get_index_constituents(ticker):
+    if ticker.isdigit():
+        # Hong Kong stocks
+        index_ticker = "^HSI"
+        index_name = "Hang Seng Index"
+    else:
+        # US stocks
+        index_ticker = "^GSPC"
+        index_name = "S&P 500"
+    
+    index = yf.Ticker(index_ticker)
+    return index.info.get('components', []), index_name
+
+def get_stock_info(symbol):
+    try:
+        stock = yf.Ticker(symbol)
+        info = stock.info
+        return {
+            'symbol': symbol,
+            'industry': info.get('industry', 'Unknown'),
+            'pe': info.get('trailingPE', None),
+            'roe': info.get('returnOnEquity', None)
+        }
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return {
+            'symbol': symbol,
+            'industry': 'Unknown',
+            'pe': None,
+            'roe': None
+        }
+
+def calculate_industry_averages(stocks_data, target_industry):
+    industry_stocks = [stock for stock in stocks_data if stock['industry'] == target_industry]
+    
+    valid_pe = [stock['pe'] for stock in industry_stocks if stock['pe'] is not None and stock['pe'] > 0]
+    valid_roe = [stock['roe'] for stock in industry_stocks if stock['roe'] is not None and stock['roe'] > 0]
+    
+    avg_pe = np.mean(valid_pe) if valid_pe else None
+    avg_roe = np.mean(valid_roe) if valid_roe else None
+    
+    return avg_pe, avg_roe, len(industry_stocks)
 
 def get_financial_metrics(ticker):
     stock = yf.Ticker(ticker)
@@ -378,6 +422,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     fair_value = equity_value / shares_outstanding
     
     return fair_value, None
+
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
 
@@ -402,6 +447,28 @@ def main():
         try:
             st.session_state.data = get_stock_data(st.session_state.formatted_ticker)
             st.success(f"Data fetched successfully for {st.session_state.formatted_ticker}")
+
+            # New section to fetch industry data
+            constituents, index_name = get_index_constituents(ticker)
+            if constituents:
+                with st.spinner(f"Fetching data for {index_name} constituents..."):
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        stocks_data = list(executor.map(get_stock_info, constituents))
+                
+                target_stock = get_stock_info(st.session_state.formatted_ticker)
+                if target_stock['industry'] != 'Unknown':
+                    avg_pe, avg_roe, industry_count = calculate_industry_averages(stocks_data, target_stock['industry'])
+                    st.session_state.industry_averages = {
+                        'avg_pe': avg_pe,
+                        'avg_roe': avg_roe,
+                        'industry': target_stock['industry'],
+                        'count': industry_count
+                    }
+                else:
+                    st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
+            else:
+                st.warning(f"Unable to fetch constituents for {index_name}")
+
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
 
@@ -410,6 +477,20 @@ def main():
             current_price = st.session_state.data['Close'].iloc[-1]
             strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
 
+            # Display industry averages at the top
+            if hasattr(st.session_state, 'industry_averages'):
+                st.sidebar.markdown("### Industry Averages")
+                st.sidebar.markdown(f"Industry: {st.session_state.industry_averages['industry']}")
+                st.sidebar.markdown(f"Number of companies: {st.session_state.industry_averages['count']}")
+                if st.session_state.industry_averages['avg_pe']:
+                    st.sidebar.markdown(f"Average P/E: {st.session_state.industry_averages['avg_pe']:.2f}")
+                else:
+                    st.sidebar.markdown("Average P/E: N/A")
+                if st.session_state.industry_averages['avg_roe']:
+                    st.sidebar.markdown(f"Average ROE: {st.session_state.industry_averages['avg_roe']:.2%}")
+                else:
+                    st.sidebar.markdown("Average ROE: N/A")
+            
             with col1:
                 st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
