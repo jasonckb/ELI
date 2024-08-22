@@ -674,7 +674,7 @@ def main():
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 # New section for Valuation Model
-                st.markdown("<h3>Fair Value Calculation</h3>", unsafe_allow_html=True)
+                st.markdown(f"<h3>{ticker}Fair Value Calculation</h3>", unsafe_allow_html=True)
                 try:
                     # Fetch required financial data
                     financials = get_financial_data(st.session_state.formatted_ticker)
