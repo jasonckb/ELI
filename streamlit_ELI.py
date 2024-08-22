@@ -233,14 +233,9 @@ def get_stock_info(symbol):
     try:
         stock = yf.Ticker(symbol)
         info = stock.info
-        
-        # Process the industry name
-        full_industry = info.get('industry', 'Unknown')
-        industry = full_industry.split('-')[0].strip() if '-' in full_industry else full_industry
-        
         return {
             'symbol': symbol,
-            'industry': industry,
+            'industry': info.get('industry', 'Unknown'),
             'pe': info.get('trailingPE', None),
             'roe': info.get('returnOnEquity', None)
         }
@@ -253,34 +248,22 @@ def get_stock_info(symbol):
             'roe': None
         }
 
-import numpy as np
-
 def calculate_industry_averages(stocks_data, target_industry):
-    try:
-        industry_stocks = [stock for stock in stocks_data if stock['industry'] == target_industry]
-        
-        if not industry_stocks:
-            print(f"No stocks found for industry: {target_industry}")
-            return None, None, 0, None, None, None, None
-
-        valid_pe = [stock['pe'] for stock in industry_stocks if stock['pe'] is not None and stock['pe'] > 0]
-        valid_roe = [stock['roe'] for stock in industry_stocks if stock['roe'] is not None and stock['roe'] > 0]
-        
-        avg_pe = np.mean(valid_pe) if valid_pe else None
-        avg_roe = np.mean(valid_roe) if valid_roe else None
-        
-        min_pe = min(valid_pe) if valid_pe else None
-        max_pe = max(valid_pe) if valid_pe else None
-        min_roe = min(valid_roe) if valid_roe else None
-        max_roe = max(valid_roe) if valid_roe else None
-        
-        print(f"Calculated averages for {target_industry}: PE={avg_pe:.2f if avg_pe else 'N/A'}, ROE={avg_roe:.2f if avg_roe else 'N/A'}")
-        
-        return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
-    except Exception as e:
-        print(f"Error calculating industry averages for {target_industry}: {str(e)}")
-        return None, None, 0, None, None, None, None
+    industry_stocks = [stock for stock in stocks_data if stock['industry'] == target_industry]
     
+    valid_pe = [stock['pe'] for stock in industry_stocks if stock['pe'] is not None and stock['pe'] > 0]
+    valid_roe = [stock['roe'] for stock in industry_stocks if stock['roe'] is not None and stock['roe'] > 0]
+    
+    avg_pe = np.mean(valid_pe) if valid_pe else None
+    avg_roe = np.mean(valid_roe) if valid_roe else None
+    
+    min_pe = min(valid_pe) if valid_pe else None
+    max_pe = max(valid_pe) if valid_pe else None
+    min_roe = min(valid_roe) if valid_roe else None
+    max_roe = max(valid_roe) if valid_roe else None
+    
+    return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
+
 def get_financial_metrics(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
