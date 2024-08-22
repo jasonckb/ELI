@@ -241,7 +241,12 @@ def calculate_industry_averages(stocks_data, target_industry):
     avg_pe = np.mean(valid_pe) if valid_pe else None
     avg_roe = np.mean(valid_roe) if valid_roe else None
     
-    return avg_pe, avg_roe, len(industry_stocks)
+    min_pe = min(valid_pe) if valid_pe else None
+    max_pe = max(valid_pe) if valid_pe else None
+    min_roe = min(valid_roe) if valid_roe else None
+    max_roe = max(valid_roe) if valid_roe else None
+    
+    return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
 def get_financial_metrics(ticker):
     stock = yf.Ticker(ticker)
