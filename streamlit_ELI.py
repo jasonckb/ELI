@@ -742,6 +742,8 @@ def main():
                         else:
                             st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> ${yf.Ticker(ticker).info.get("trailingPE"):.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> ${yf.Ticker(ticker).info.get("returnOnEquity"):.2f}</p>", unsafe_allow_html=True)
 
                     with col2:
                         # Industry averages
