@@ -247,39 +247,12 @@ def get_stock_info(symbol):
             'pe': None,
             'roe': None
         }
-    
-def simplify_industry(industry):
-    if not industry or industry == 'Unknown':
-        return 'Unknown'
-    
-    # Split the industry name and take the first part
-    main_industry = industry.split('-')[0].strip()
-    
-    # Remove common suffixes
-    suffixes_to_remove = [' Group', ' Services', ' Service', ' Companies', ' Company']
-    for suffix in suffixes_to_remove:
-        if main_industry.endswith(suffix):
-            main_industry = main_industry[:-len(suffix)]
-    
-    return main_industry.strip()
 
 def calculate_industry_averages(stocks_data, target_industry):
-    print(f"Calculating averages for industry: {target_industry}")
-    print(f"Total stocks in data: {len(stocks_data)}")
+    industry_stocks = [stock for stock in stocks_data if stock['industry'] == target_industry]
     
-    simplified_target = simplify_industry(target_industry)
-    industry_stocks = [stock for stock in stocks_data if simplify_industry(stock['industry']) == simplified_target]
-    print(f"Stocks in target industry '{simplified_target}': {len(industry_stocks)}")
-    
-    if not industry_stocks:
-        print(f"No stocks found for industry: {simplified_target}")
-        return None, None, 0, None, None, None, None
-
     valid_pe = [stock['pe'] for stock in industry_stocks if stock['pe'] is not None and stock['pe'] > 0]
     valid_roe = [stock['roe'] for stock in industry_stocks if stock['roe'] is not None and stock['roe'] > 0]
-    
-    print(f"Stocks with valid PE: {len(valid_pe)}")
-    print(f"Stocks with valid ROE: {len(valid_roe)}")
     
     avg_pe = np.mean(valid_pe) if valid_pe else None
     avg_roe = np.mean(valid_roe) if valid_roe else None
@@ -288,8 +261,6 @@ def calculate_industry_averages(stocks_data, target_industry):
     max_pe = max(valid_pe) if valid_pe else None
     min_roe = min(valid_roe) if valid_roe else None
     max_roe = max(valid_roe) if valid_roe else None
-    
-    print(f"Calculated averages for '{simplified_target}': PE={avg_pe:.2f if avg_pe else 'N/A'}, ROE={avg_roe:.2f if avg_roe else 'N/A'}")
     
     return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
@@ -524,30 +495,22 @@ def main():
                         stocks_data = list(executor.map(get_stock_info, constituents))
                 
                 target_stock = get_stock_info(st.session_state.formatted_ticker)
-                print(f"Target stock industry: {target_stock['industry']}")
-
                 if target_stock['industry'] != 'Unknown':
-                    simplified_industry = simplify_industry(target_stock['industry'])
                     avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
-                    
-                    if avg_pe is not None and avg_roe is not None:
-                        st.session_state.industry_averages = {
-                            'avg_pe': avg_pe,
-                            'avg_roe': avg_roe,
-                            'industry': simplified_industry,  # Store the simplified industry name
-                            'original_industry': target_stock['industry'],  # Store the original industry name as well
-                            'count': industry_count,
-                            'min_pe': min_pe,
-                            'max_pe': max_pe,
-                            'min_roe': min_roe,
-                            'max_roe': max_roe
-                        }
-                        print(f"Industry averages calculated and stored for {simplified_industry}")
-                    else:
-                        print(f"Failed to calculate industry averages for {simplified_industry}")
-                        st.warning(f"Unable to calculate industry averages for {simplified_industry}")
+                    st.session_state.industry_averages = {
+                        'avg_pe': avg_pe,
+                        'avg_roe': avg_roe,
+                        'industry': target_stock['industry'],
+                        'count': industry_count,
+                        'min_pe': min_pe,
+                        'max_pe': max_pe,
+                        'min_roe': min_roe,
+                        'max_roe': max_roe
+                    }
                 else:
                     st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
+            else:
+                st.warning(f"Unable to fetch constituents for {index_name}")
 
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
