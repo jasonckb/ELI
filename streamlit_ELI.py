@@ -733,6 +733,21 @@ def main():
                     col1, col2, col3, col4 = st.columns(4)
 
                     with col1:
+                        # Industry averages
+                        if hasattr(st.session_state, 'industry_averages'):
+                            st.markdown("<h4>Industry Averages:</h4>", unsafe_allow_html=True)
+                            st.markdown(f"Industry: {st.session_state.industry_averages['industry']}")
+                            st.markdown(f"Number of companies: {st.session_state.industry_averages['count']}")
+                            if st.session_state.industry_averages['avg_pe']:
+                                st.markdown(f"Average P/E: {st.session_state.industry_averages['avg_pe']:.2f}")
+                                st.markdown(f"P/E Range: {st.session_state.industry_averages['min_pe']:.2f} - {st.session_state.industry_averages['max_pe']:.2f}")
+                            else:
+                                st.markdown("Average P/E: N/A")
+                            if st.session_state.industry_averages['avg_roe']:
+                                st.markdown(f"Average ROE: {st.session_state.industry_averages['avg_roe']:.2%}")
+                                st.markdown(f"ROE Range: {st.session_state.industry_averages['min_roe']:.2%} - {st.session_state.industry_averages['max_roe']:.2%}")
+                            else:
+                                st.markdown("Average ROE: N/A")
                         st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
@@ -750,21 +765,20 @@ def main():
 
 
                     with col2:
-                        # Industry averages
-                        if hasattr(st.session_state, 'industry_averages'):
-                            st.markdown("<h4>Industry Averages:</h4>", unsafe_allow_html=True)
-                            st.markdown(f"Industry: {st.session_state.industry_averages['industry']}")
-                            st.markdown(f"Number of companies: {st.session_state.industry_averages['count']}")
-                            if st.session_state.industry_averages['avg_pe']:
-                                st.markdown(f"Average P/E: {st.session_state.industry_averages['avg_pe']:.2f}")
-                                st.markdown(f"P/E Range: {st.session_state.industry_averages['min_pe']:.2f} - {st.session_state.industry_averages['max_pe']:.2f}")
-                            else:
-                                st.markdown("Average P/E: N/A")
-                            if st.session_state.industry_averages['avg_roe']:
-                                st.markdown(f"Average ROE: {st.session_state.industry_averages['avg_roe']:.2%}")
-                                st.markdown(f"ROE Range: {st.session_state.industry_averages['min_roe']:.2%} - {st.session_state.industry_averages['max_roe']:.2%}")
-                            else:
-                                st.markdown("Average ROE: N/A")
+                        st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
+                        if isinstance(fcf_growth_rate, (int, float)):
+                            st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_error}</p>", unsafe_allow_html=True)
+                        if error_message:
+                            st.markdown(f"<p><b>Fair Value:</b> {error_message}</p>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> {pe:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical ROE:</b> {roe:.2%}</p>", unsafe_allow_html=True)
 
                     with col3:
                         # FCF Trend Chart                        
