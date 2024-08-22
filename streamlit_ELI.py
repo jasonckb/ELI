@@ -441,7 +441,31 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     return fair_value, None
 
 def main():
-    # ... [previous code remains unchanged]
+    st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
+
+    # Move ticker input to the top
+    ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
+
+    # Create two columns for layout
+    col1, col2 = st.columns([1, 4])
+
+    # Sidebar inputs (now in the first column)
+    with col1:
+        knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
+        strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
+        
+        knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
+        strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
+        airbag_pct = st.number_input("Airbag Price %:", value=0.0)
+               
+        refresh = st.button("Refresh Data")
+
+    try:
+        formatted_ticker = format_ticker(ticker)
+    except Exception as e:
+        st.error(f"Error formatting ticker: {str(e)}")
+        return
+
 
     if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
         st.session_state.formatted_ticker = format_ticker(ticker)
