@@ -248,11 +248,28 @@ def get_stock_info(symbol):
             'roe': None
         }
 
+import numpy as np
+
+def simplify_industry(industry):
+    return industry.split('-')[0].strip() if '-' in industry else industry
+
 def calculate_industry_averages(stocks_data, target_industry):
-    industry_stocks = [stock for stock in stocks_data if stock['industry'] == target_industry]
+    print(f"Calculating averages for industry: {target_industry}")
+    print(f"Total stocks in data: {len(stocks_data)}")
     
+    simplified_target = simplify_industry(target_industry)
+    industry_stocks = [stock for stock in stocks_data if simplify_industry(stock['industry']) == simplified_target]
+    print(f"Stocks in target industry: {len(industry_stocks)}")
+    
+    if not industry_stocks:
+        print(f"No stocks found for industry: {simplified_target}")
+        return None, None, 0, None, None, None, None
+
     valid_pe = [stock['pe'] for stock in industry_stocks if stock['pe'] is not None and stock['pe'] > 0]
     valid_roe = [stock['roe'] for stock in industry_stocks if stock['roe'] is not None and stock['roe'] > 0]
+    
+    print(f"Stocks with valid PE: {len(valid_pe)}")
+    print(f"Stocks with valid ROE: {len(valid_roe)}")
     
     avg_pe = np.mean(valid_pe) if valid_pe else None
     avg_roe = np.mean(valid_roe) if valid_roe else None
@@ -261,6 +278,8 @@ def calculate_industry_averages(stocks_data, target_industry):
     max_pe = max(valid_pe) if valid_pe else None
     min_roe = min(valid_roe) if valid_roe else None
     max_roe = max(valid_roe) if valid_roe else None
+    
+    print(f"Calculated averages: PE={avg_pe:.2f if avg_pe else 'N/A'}, ROE={avg_roe:.2f if avg_roe else 'N/A'}")
     
     return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
