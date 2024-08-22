@@ -233,9 +233,14 @@ def get_stock_info(symbol):
     try:
         stock = yf.Ticker(symbol)
         info = stock.info
+        
+        # Process the industry name
+        full_industry = info.get('industry', 'Unknown')
+        industry = full_industry.split('-')[0].strip() if '-' in full_industry else full_industry
+        
         return {
             'symbol': symbol,
-            'industry': info.get('industry', 'Unknown'),
+            'industry': industry,
             'pe': info.get('trailingPE', None),
             'roe': info.get('returnOnEquity', None)
         }
