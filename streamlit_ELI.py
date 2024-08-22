@@ -710,6 +710,9 @@ def main():
                         weight_of_equity = 1                    
                     
                     wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+
+                    pe = yf.Ticker(ticker).info.get("trailingPE")
+                    
                     
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
@@ -742,8 +745,9 @@ def main():
                         else:
                             st.markdown(f"<p><b>Fair Value:</b> ${fair_value:.2f}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Current Price:</b> ${current_price:.2f}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Historical PE:</b> ${yf.Ticker(ticker).info.get("trailingPE"):.2f}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Historical PE:</b> ${yf.Ticker(ticker).info.get("returnOnEquity"):.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> ${pe:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical ROE:</b> ${roe:.2f}</p>", unsafe_allow_html=True)
+
 
                     with col2:
                         # Industry averages
