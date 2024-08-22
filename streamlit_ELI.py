@@ -191,15 +191,27 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 def get_index_constituents(ticker):
     if ticker.isdigit():
         # Hong Kong stocks
-        index_ticker = "^HSI"
+        url = "https://en.wikipedia.org/wiki/Hang_Seng_Index"
         index_name = "Hang Seng Index"
     else:
         # US stocks
-        index_ticker = "^GSPC"
+        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
         index_name = "S&P 500"
     
-    index = yf.Ticker(index_ticker)
-    return index.info.get('components', []), index_name
+    try:
+        tables = pd.read_html(url)
+        if ticker.isdigit():
+            df = tables[1]  # Hang Seng Index constituents are in the second table
+            constituents = df['Code'].tolist()
+            constituents = [f"{code:04d}.HK" for code in constituents]  # Format as ####.HK
+        else:
+            df = tables[0]  # S&P 500 constituents are in the first table
+            constituents = df['Symbol'].tolist()
+        
+        return constituents, index_name
+    except Exception as e:
+        print(f"Error fetching constituents for {index_name}: {str(e)}")
+        return [], index_name
 
 def get_stock_info(symbol):
     try:
