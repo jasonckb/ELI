@@ -14,6 +14,14 @@ from concurrent.futures import ThreadPoolExecutor
 # Set page to wide mode
 st.set_page_config(layout="wide")
 
+st.warning("""
+    **Disclaimer:**
+    - This app is for educational purposes only and should not be considered as financial advice.
+    - We do not guarantee the accuracy of the data. The data source is Yahoo Finance, which may have limitations or inaccuracies.
+    - Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
+""")
+
+
 def get_stock_data(ticker, period="1y"):
     stock = yf.Ticker(ticker)
     data = stock.history(period=period)
