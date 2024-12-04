@@ -464,6 +464,22 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     
     return fair_value, None
 
+def format_large_number(number):
+    """Format large numbers with proper type checking"""
+    try:
+        if isinstance(number, str):
+            return number
+        if not isinstance(number, (int, float)):
+            return "N/A"
+        if abs(number) >= 1e9:
+            return f"${number/1e9:.2f}B"
+        elif abs(number) >= 1e6:
+            return f"${number/1e6:.2f}M"
+        else:
+            return f"${number:,.2f}"
+    except Exception:
+        return "N/A"
+
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
 
