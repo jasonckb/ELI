@@ -11,8 +11,25 @@ import os
 from yahoofinancials import YahooFinancials
 from concurrent.futures import ThreadPoolExecutor
 
-# Set page to wide mode
-st.set_page_config(layout="wide")
+# Set page configuration
+st.set_page_config(
+    layout="wide",
+    page_title="Stock Analysis Dashboard",
+    page_icon="📈"
+)
+
+# Initialize session state for DCF inputs
+if 'market_risk_premium' not in st.session_state:
+    st.session_state.market_risk_premium = 8.5
+if 'terminal_growth_rate' not in st.session_state:
+    st.session_state.terminal_growth_rate = 3.0
+if 'risk_free_rate' not in st.session_state:
+    st.session_state.risk_free_rate = None
+if 'high_growth_period' not in st.session_state:
+    st.session_state.high_growth_period = 5
+if 'dcf_update' not in st.session_state:
+    st.session_state.dcf_update = False
+
 
 st.warning("""
     **Disclaimer:**
@@ -22,11 +39,44 @@ st.warning("""
 """)
 
 
+def format_large_number(number):
+    """Format large numbers with proper type checking"""
+    try:
+        if isinstance(number, str):
+            return number
+        if not isinstance(number, (int, float)):
+            return "N/A"
+        if abs(number) >= 1e9:
+            return f"${number/1e9:.2f}B"
+        elif abs(number) >= 1e6:
+            return f"${number/1e6:.2f}M"
+        else:
+            return f"${number:,.2f}"
+    except Exception:
+        return "N/A"
+
+@st.cache_data(ttl=3600)
 def get_stock_data(ticker, period="1y"):
-    stock = yf.Ticker(ticker)
-    data = stock.history(period=period)
-    data = data.dropna()
-    return data
+    """Fetch stock data with caching"""
+    try:
+        stock = yf.Ticker(ticker)
+        data = stock.history(period=period)
+        if data.empty:
+            raise ValueError(f"No data found for ticker {ticker}")
+        return data.dropna()
+    except Exception as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return None
+
+@st.cache_data(ttl=3600)
+def get_risk_free_rate():
+    """Get risk-free rate with caching"""
+    try:
+        treasury_ticker = "^TNX"
+        treasury_data = yf.Ticker(treasury_ticker).history(period="1d")
+        return treasury_data['Close'].iloc[-1] / 100
+    except:
+        return 0.035
 
 def format_ticker(ticker):
     if ticker.isdigit():
@@ -324,47 +374,88 @@ def get_risk_free_rate():
         return 0.035  # Default to 3.5% if unable to fetch
     
 
+@st.cache_data(ttl=3600)
 def get_financial_data(ticker):
-    stock = yf.Ticker(ticker)
-    financials = {}
-    
-    # Balance sheet data
-    balance_sheet = stock.balance_sheet
-    financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-    financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
-    financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
-    financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
-    #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
-    financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-    financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
-    financials['share_issued'] = yf.Ticker(ticker).info.get("sharesOutstanding", "N/A")#balance_sheet.loc['Share Issued'].iloc[0] if 'Share Issued' in balance_sheet.index else 0
-    
-    # Income statement data
-    income_stmt = stock.financials
-    financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-    financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
-    financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-    financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
-    
-    # Cash flow statement data
-    cash_flow = stock.cashflow
-    if 'Free Cash Flow' in cash_flow.index:
-        financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-        financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1]
-        financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2]
-        financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
-    else:
-        # If Free Cash Flow is not available, calculate it
-        operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-        capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
-        financials['fcf_latest'] = operating_cash_flow - capital_expenditures
-        financials['fcf_3years_ago'] = None  # We don't have enough data to calculate this
+    """Get financial data with caching"""
+    try:
+        stock = yf.Ticker(ticker)
+        financials = {}
+        
+        # Balance sheet data
+        balance_sheet = stock.balance_sheet
+        financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
+        financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
+        financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
+        financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
+        financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
+        financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
+        financials['share_issued'] = stock.info.get("sharesOutstanding", "N/A")
+        
+        # Income statement data
+        income_stmt = stock.financials
+        financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
+        financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
+        financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
+        financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
+        
+        # Cash flow statement data
+        cash_flow = stock.cashflow
+        if 'Free Cash Flow' in cash_flow.index:
+            financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
+            financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1]
+            financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2]
+            financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+        else:
+            operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
+            capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
+            financials['fcf_latest'] = operating_cash_flow - capital_expenditures
+            financials['fcf_3years_ago'] = None
 
-    # Additional info
-    financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
-    financials['market_cap'] = stock.info.get('marketCap')
-    
-    return financials
+        financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
+        financials['market_cap'] = stock.info.get('marketCap')
+        
+        return financials
+    except Exception as e:
+        st.error(f"Error fetching financial data: {str(e)}")
+        return None
+
+@st.cache_data(ttl=3600)
+def get_financial_metrics(ticker):
+    """Get financial metrics with caching"""
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        metrics = {
+            "Sector": info.get("sector", "N/A"),
+            "Industry": info.get("industry", "N/A"),
+            "Market Cap": info.get("marketCap", "N/A"),
+            "Outstanding Shares": info.get("sharesOutstanding", "N/A"),       
+            "Historical P/E": info.get("trailingPE", "N/A"),
+            "Forward P/E": info.get("forwardPE", "N/A"),
+            "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
+            "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100 if info.get("trailingAnnualDividendYield") else "N/A",
+            "Price/Book": info.get("priceToBook", "N/A"),
+            "Net Income": info.get("netIncomeToCommon", "N/A"),
+            "Revenue": info.get("totalRevenue", "N/A"),
+            "Profit Margin": info.get("profitMargins", "N/A"),
+            "ROE": info.get("returnOnEquity", "N/A"),
+        }
+        
+        # Format large numbers
+        for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
+            if isinstance(metrics[key], (int, float)):
+                metrics[key] = format_large_number(metrics[key])
+        
+        # Format percentages
+        for key in ["Profit Margin", "ROE"]:
+            if isinstance(metrics[key], float):
+                metrics[key] = f"{metrics[key]:.2%}"
+        
+        return metrics
+    except Exception as e:
+        st.error(f"Error fetching financial metrics: {str(e)}")
+        return None
     
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     # Cost of Equity
@@ -697,6 +788,10 @@ def main():
                      
                     roe = financials['net_income'] / financials['total_equity']
                     
+                    # Calculate WACC using the dedicated function
+                    wacc = calculate_wacc(financials, risk_free_rate, market_risk_premium, beta)
+                    
+                    # Calculate cost of equity for display purposes
                     cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
                     
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
@@ -716,11 +811,8 @@ def main():
                     else:
                         weight_of_debt = 0
                         weight_of_equity = 1                    
-                    
-                    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
 
                     pe = stock.info.get('trailingPE', 'NA')
-                    
                     
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
@@ -732,6 +824,7 @@ def main():
                     else:
                         fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
                         valuation_method = "Discounted Cash Flow (DCF) Model (Inapplicable to Negative FCF)"
+
                     
                    
                     st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
