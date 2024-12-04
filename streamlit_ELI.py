@@ -457,6 +457,32 @@ def get_financial_metrics(ticker):
         st.error(f"Error fetching financial metrics: {str(e)}")
         return None
     
+def calculate_fcf_growth_rate(financials):
+    """Calculate the Free Cash Flow growth rate based on historical data"""
+    try:
+        # Get historical FCF values
+        fcf_3years_ago = financials.get('fcf_3years_ago')
+        fcf_2years_ago = financials.get('fcf_2years_ago')
+        fcf_latest = financials.get('fcf_latest')
+        
+        if not all([fcf_3years_ago, fcf_2years_ago, fcf_latest]):
+            return 0.03, "Missing historical FCF data, using default growth rate of 3%"
+        
+        # Calculate 3-year and 2-year growth rates
+        growth_rate_3yr = (fcf_latest / fcf_3years_ago) ** (1/3) - 1
+        growth_rate_2yr = (fcf_latest / fcf_2years_ago) ** (1/2) - 1
+        
+        # Use weighted average of growth rates (more weight to recent growth)
+        weighted_growth_rate = (growth_rate_2yr * 0.6) + (growth_rate_3yr * 0.4)
+        
+        # Cap the growth rate between -20% and 20% for reasonable projections
+        capped_growth_rate = max(min(weighted_growth_rate, 0.20), -0.20)
+        
+        return capped_growth_rate, None
+        
+    except Exception as e:
+        return 0.03, f"Error calculating FCF growth rate: {str(e)}"
+
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     """Calculate Weighted Average Cost of Capital"""
     # Cost of Equity
@@ -524,6 +550,7 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
     fair_value = equity_value / shares_outstanding
     
     return fair_value, None
+
 
 def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
     try:
