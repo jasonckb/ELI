@@ -458,6 +458,7 @@ def get_financial_metrics(ticker):
         return None
     
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
+    """Calculate Weighted Average Cost of Capital"""
     # Cost of Equity
     cost_of_equity = risk_free_rate + beta * market_risk_premium/100
     
@@ -468,40 +469,61 @@ def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
         cost_of_debt = risk_free_rate
     
     # Tax Rate
-    pre_tax_income = financials.get('pre_tax_income', financials['net_income'] + financials['income_tax'])
-    if pre_tax_income != 0:
-        tax_rate = financials['income_tax'] / pre_tax_income
+    if financials['pre_tax_income'] != 0:
+        tax_rate = financials['income_tax'] / financials['pre_tax_income']
     else:
-        tax_rate = 0.30  # Assume a default tax rate of 30%
+        tax_rate = 0.21  # Assume a default corporate tax rate of 21%
     
     # Weights
     total_capital = financials['total_debt'] + financials['total_equity']
-    weight_of_debt = financials['total_debt'] / total_capital
-    weight_of_equity = financials['total_equity'] / total_capital
+    if total_capital != 0:
+        weight_of_debt = financials['total_debt'] / total_capital
+        weight_of_equity = financials['total_equity'] / total_capital
+    else:
+        weight_of_debt = 0
+        weight_of_equity = 1
     
-    # WACC
+    # WACC calculation
     wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
     
     return wacc
 
-def calculate_fcf_growth_rate(financials):
-    fcf_latest = financials['fcf_latest']
-    fcf_1year_ago = financials['fcf_1years_ago']
-    fcf_2years_ago = financials['fcf_2years_ago']
-    fcf_3years_ago = financials['fcf_3years_ago']
-
-    if fcf_latest <= 0 or all(fcf <= 0 for fcf in [fcf_1year_ago, fcf_2years_ago, fcf_3years_ago] if fcf is not None):
-        return None, "Growth rate cannot be estimated due to negative FCF"
-
-    if fcf_3years_ago is not None and fcf_3years_ago > 0:
-        return (fcf_latest / fcf_3years_ago) ** (1/3) - 1, None
-    elif fcf_2years_ago is not None and fcf_2years_ago > 0:
-        return (fcf_latest / fcf_2years_ago) ** (1/2) - 1, None
-    elif fcf_1year_ago is not None and fcf_1year_ago > 0:
-        return (fcf_latest / fcf_1year_ago) - 1, None
-    else:
-        return None, "Growth rate cannot be estimated due to negative FCF"
-
+def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price):
+    """Calculate DCF fair value"""
+    fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
+    
+    if error_message:
+        return None, error_message
+    
+    fcf = financials['fcf_latest']
+    pv_fcf = 0
+    
+    # High growth period
+    for i in range(1, high_growth_period + 1):
+        fcf *= (1 + fcf_growth_rate)
+        pv_fcf += fcf / ((1 + wacc) ** i)
+    
+    # Terminal value
+    terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
+    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
+    
+    # Enterprise Value
+    enterprise_value = pv_fcf + pv_terminal_value
+    
+    # Equity Value
+    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
+    
+    # Shares outstanding
+    shares_outstanding = financials['share_issued']
+    if shares_outstanding is None:
+        if current_price <= 0:
+            return None, "Invalid current price for calculating shares outstanding"
+        shares_outstanding = equity_value / current_price
+    
+    # Fair value per share
+    fair_value = equity_value / shares_outstanding
+    
+    return fair_value, None
 
 def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
     try:
