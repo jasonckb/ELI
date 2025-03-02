@@ -774,8 +774,8 @@ def main():
 
 
  for {index_name} constituents..."):
-                    with ThreadPoolExecutor(max_workers=10) as executor:
-                        stocks_data = list(executor.map(get_stock_info, constituents))
+                with ThreadPoolExecutor(max_workers=10) as executor:
+                    stocks_data = list(executor.map(get_stock_info, constituents))
                 
                 target_stock = get_stock_info(st.session_state.formatted_ticker)
                 if target_stock['industry'] != 'Unknown':
