@@ -32,37 +32,92 @@ def save_to_cache(data, ticker, data_type, period="1y"):
     if isinstance(data, pd.DataFrame) and isinstance(data.index, pd.DatetimeIndex):
         data_dict = {
             "index": data.index.strftime("%Y-%m-%d %H:%M:%S").tolist(),
-            "data": data.to_dict(orient="records")
+            "data": data.to_dict(orient="records"),
+            "timestamp": time.time()  # Add timestamp for cache age
         }
     else:
-        data_dict = data
-        
-    with open(cache_path, "w") as f:
-        json.dump(data_dict, f)
+        if isinstance(data, dict):
+            data_dict = {**data, "timestamp": time.time()}
+        else:
+            data_dict = {"data": data, "timestamp": time.time()}
+            
+    try:
+        with open(cache_path, "w") as f:
+            json.dump(data_dict, f)
+    except Exception as e:
+        st.error(f"Error saving to cache: {str(e)}")
 
 # Function to load data from cache
 def load_from_cache(ticker, data_type, period="1y"):
     cache_key = get_cache_key(ticker, data_type, period)
     cache_path = cache_dir / cache_key
     
+    # Check if we should only use cached data
+    use_cached_only_mode = hasattr(st.session_state, 'use_cached_only') and st.session_state.use_cached_only
+    
     if cache_path.exists():
-        # Check if cache is recent (less than 24 hours old)
-        if time.time() - cache_path.stat().st_mtime < 86400:  # 24 hours in seconds
+        try:
             with open(cache_path, "r") as f:
                 data_dict = json.load(f)
+            
+            # Check cache age
+            cache_age_hours = (time.time() - data_dict.get("timestamp", 0)) / 3600
+            cache_max_age = 24  # 24 hours default
+            
+            # Different cache expiration for different data types
+            if data_type == "history":
+                cache_max_age = 24  # Stock price history: 24 hours
+            elif data_type in ["financial_metrics", "financial_data"]:
+                cache_max_age = 168  # Financial data: 1 week (7 days)
+            elif data_type in ["stock_info", "index"]:
+                cache_max_age = 336  # Index constituents: 2 weeks (14 days)
+            
+            # If in cached only mode, use the cache regardless of age
+            if use_cached_only_mode or cache_age_hours < cache_max_age:
+                # Handle DataFrame reconstruction
+                if isinstance(data_dict, dict) and "index" in data_dict and "data" in data_dict:
+                    df = pd.DataFrame(data_dict["data"])
+                    df.index = pd.DatetimeIndex(data_dict["index"])
+                    
+                    # Show cache age warning if older than 1 day
+                    if cache_age_hours > 24:
+                        st.info(f"Using cached data from {cache_age_hours:.1f} hours ago")
+                    
+                    return df
                 
-            # Reconstruct DataFrame if it's a DataFrame
-            if isinstance(data_dict, dict) and "index" in data_dict and "data" in data_dict:
-                df = pd.DataFrame(data_dict["data"])
-                df.index = pd.DatetimeIndex(data_dict["index"])
-                return df
-            return data_dict
+                # Return data part if it's a simple dict with timestamp
+                if isinstance(data_dict, dict) and "timestamp" in data_dict:
+                    # Check if it's just timestamp and data
+                    if len(data_dict) == 2 and "data" in data_dict:
+                        return data_dict["data"]
+                    # Otherwise return everything except timestamp
+                    return {k: v for k, v in data_dict.items() if k != "timestamp"}
+                
+                return data_dict
+            elif use_cached_only_mode:
+                st.warning(f"Using outdated cache data from {cache_age_hours:.1f} hours ago because 'Use cached data only' is enabled")
+                return data_dict
+        except Exception as e:
+            st.error(f"Error loading from cache: {str(e)}")
+            
+    # If we get here, either cache doesn't exist or is too old
+    if use_cached_only_mode:
+        st.warning(f"No cached data found for {ticker} - {data_type}")
+    
     return None
 
 # Add rate limiting function
 def rate_limited_request(func, *args, **kwargs):
     max_retries = 5
     retry_delay = 2
+    
+    # Check if we should only use cached data
+    if hasattr(st.session_state, 'use_cached_only') and st.session_state.use_cached_only:
+        st.warning("Using cached data only. If data is not in cache, it will not be fetched.")
+        
+    # Apply throttling if enabled
+    if hasattr(st.session_state, 'throttle_delay') and st.session_state.throttle_delay > 0:
+        time.sleep(st.session_state.throttle_delay)
     
     for attempt in range(max_retries):
         try:
@@ -774,8 +829,8 @@ def main():
 
 
  for {index_name} constituents..."):
-                with ThreadPoolExecutor(max_workers=10) as executor:
-                    stocks_data = list(executor.map(get_stock_info, constituents))
+                    with ThreadPoolExecutor(max_workers=10) as executor:
+                        stocks_data = list(executor.map(get_stock_info, constituents))
                 
                 target_stock = get_stock_info(st.session_state.formatted_ticker)
                 if target_stock['industry'] != 'Unknown':
