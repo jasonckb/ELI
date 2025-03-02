@@ -687,7 +687,7 @@ def calculate_fcf_growth_rate(financials):
     except Exception as e:
         return 0.03, f"Error calculating FCF growth rate: {str(e)}, using default 3%"
 
-def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate, forecast_years=high_growth_period):
+def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate, high_growth_period):
     try:
         book_value = financials.get('total_equity', 0)
         if book_value <= 0:
@@ -707,7 +707,7 @@ def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_grow
         current_book_value = book_value
         pv_excess_returns = 0
         
-        for year in range(1, forecast_years + 1):
+        for year in range(1, high_growth_period + 1):
             # Grow book value at the terminal growth rate (or you could use a different growth rate)
             current_book_value = current_book_value * (1 + terminal_growth_rate)
             
@@ -717,13 +717,13 @@ def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_grow
             # Discount to present value
             pv_excess_returns += current_excess_return / ((1 + cost_of_equity) ** year)
         
-        # Calculate terminal value (using the book value at end of forecast period)
+        # Calculate terminal value (using the book value at end of high_growth_period)
         final_year_excess_return = (initial_roe - cost_of_equity) * current_book_value
         if cost_of_equity <= terminal_growth_rate:
             return None, "Cost of equity must be greater than terminal growth rate"
             
         terminal_value = final_year_excess_return * (1 + terminal_growth_rate) / (cost_of_equity - terminal_growth_rate)
-        pv_terminal_value = terminal_value / ((1 + cost_of_equity) ** forecast_years)
+        pv_terminal_value = terminal_value / ((1 + cost_of_equity) ** high_growth_period)
         
         # Calculate fair value
         equity_value = book_value + pv_excess_returns + pv_terminal_value
