@@ -237,23 +237,23 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
     mid_date = first_date + (last_date - first_date) / 2  # Middle of the date range
 
     # Add price level lines with annotations on the right (only if not zero)
-    if strike_price != 0:
-        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=strike_price, y1=strike_price,
-                      line=dict(color="blue", width=2, dash="dash"))
-        fig.add_annotation(x=annotation_x, y=strike_price, text=f"{strike_name}: {strike_price:.2f}",
-                           showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
+    #if strike_price != 0:
+        #fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=strike_price, y1=strike_price,
+                      #line=dict(color="blue", width=2, dash="dash"))
+        #fig.add_annotation(x=annotation_x, y=strike_price, text=f"{strike_name}: {strike_price:.2f}",
+                           #showarrow=False, xanchor="left", font=dict(size=14, color="blue"))
 
-    if airbag_price != 0:
-        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=airbag_price, y1=airbag_price,
-                      line=dict(color="green", width=2, dash="dash"))
-        fig.add_annotation(x=annotation_x, y=airbag_price, text=f"Airbag Price: {airbag_price:.2f}",
-                           showarrow=False, xanchor="left", font=dict(size=14, color="green"))
+    #if airbag_price != 0:
+        #fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=airbag_price, y1=airbag_price,
+                      #line=dict(color="green", width=2, dash="dash"))
+        #fig.add_annotation(x=annotation_x, y=airbag_price, text=f"Airbag Price: {airbag_price:.2f}",
+                           #showarrow=False, xanchor="left", font=dict(size=14, color="green"))
 
-    if knockout_price != 0:
-        fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=knockout_price, y1=knockout_price,
-                      line=dict(color="orange", width=2, dash="dash"))
-        fig.add_annotation(x=annotation_x, y=knockout_price, text=f"{knockout_name}: {knockout_price:.2f}",
-                           showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
+    #if knockout_price != 0:
+        #fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=knockout_price, y1=knockout_price,
+                      #line=dict(color="orange", width=2, dash="dash"))
+        #fig.add_annotation(x=annotation_x, y=knockout_price, text=f"{knockout_name}: {knockout_price:.2f}",
+                           #showarrow=False, xanchor="left", font=dict(size=14, color="orange"))
 
     # Add EMA lines
     fig.add_shape(type="line", x0=first_date, x1=annotation_x, y0=ema_20.iloc[-1], y1=ema_20.iloc[-1],
