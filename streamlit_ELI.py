@@ -906,8 +906,7 @@ def main():
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
             current_price = st.session_state.data['Close'].iloc[-1]
-            s
-            
+                        
             with col1:
                 st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
