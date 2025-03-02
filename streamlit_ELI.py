@@ -19,10 +19,10 @@ from concurrent.futures import ThreadPoolExecutor
 st.set_page_config(layout="wide")
 
 st.warning("""
-    **Disclaimer:**
-    - This app is for educational purposes only and should not be considered as financial advice.
-    - We do not guarantee the accuracy of the data. The data source is Yahoo Finance, which may have limitations or inaccuracies.
-    - Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
+    **免責聲明：**
+    - 此應用程式僅供教育用途，不應視為財務建議。
+    - 我們不保證數據的準確性。數據來源可能存在限制或不準確之處。
+    - 在做出任何投資決策之前，請自行進行研究並諮詢合格的財務顧問。
 """)
 
 # Create cache directory if it doesn't exist
