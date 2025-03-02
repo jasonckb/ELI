@@ -819,13 +819,7 @@ def main():
     # Sidebar inputs (now in the first column)
     with col1:
         ticker = st.text_input("Enter Stock Ticker:", value="AAPL")
-        knockout_name = st.radio("Choose name for Knock-out Price:", ("Knock-out Price", "Upper Window"))
-        strike_name = st.radio("Choose name for Strike Price:", ("Strike Price", "Lower Window"))
-        
-        knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
-        strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
-        airbag_pct = st.number_input("Airbag Price %:", value=0.0)
-        
+                
         # Add option for cached data only
         use_cached_only = st.checkbox("Use cached data only", value=False,
                                     help="If checked, the app will only use cached data and won't make new API calls")
