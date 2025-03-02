@@ -1,3 +1,6 @@
+I'll provide the complete code in a single block for your Streamlit stock analysis application. This version incorporates all the fixes for the indentation errors and adds rate limiting and caching to prevent "Too Many Requests" errors:
+
+```python
 import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
@@ -14,6 +17,16 @@ import json
 from pathlib import Path
 from yahoofinancials import YahooFinancials
 from concurrent.futures import ThreadPoolExecutor
+
+# Set page to wide mode
+st.set_page_config(layout="wide")
+
+st.warning("""
+    **Disclaimer:**
+    - This app is for educational purposes only and should not be considered as financial advice.
+    - We do not guarantee the accuracy of the data. The data source is Yahoo Finance, which may have limitations or inaccuracies.
+    - Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
+""")
 
 # Create cache directory if it doesn't exist
 cache_dir = Path("cache")
@@ -134,17 +147,6 @@ def rate_limited_request(func, *args, **kwargs):
                     raise Exception("Too many requests. Please try again later.") from e
             else:
                 raise  # Re-raise if it's not a rate limit error
-
-# Set page to wide mode
-st.set_page_config(layout="wide")
-
-st.warning("""
-    **Disclaimer:**
-    - This app is for educational purposes only and should not be considered as financial advice.
-    - We do not guarantee the accuracy of the data. The data source is Yahoo Finance, which may have limitations or inaccuracies.
-    - Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
-""")
-
 
 def get_stock_data(ticker, period="1y"):
     # Try to load from cache first
@@ -339,7 +341,6 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 
     return fig
 
-
 def get_index_constituents(ticker):
     # Create cache key based on index type (Hong Kong or US)
     index_type = "HSI" if ticker.isdigit() else "SP500"
@@ -519,7 +520,6 @@ def get_financial_metrics(ticker):
         }
 
 # Helper functions for DCF model
-
 def get_risk_free_rate():
     try:
         treasury_ticker = "^TNX"  # 10-year Treasury Yield
@@ -527,7 +527,6 @@ def get_risk_free_rate():
         return treasury_data['Close'].iloc[-1] / 100  # Convert to decimal
     except:
         return 0.035  # Default to 3.5% if unable to fetch
-    
 
 def get_financial_data(ticker):
     # Try to load from cache first
@@ -635,7 +634,7 @@ def get_financial_data(ticker):
             'shares_outstanding': 0,
             'market_cap': 0
         }
-    
+
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
     try:
         # Cost of Equity
@@ -690,7 +689,6 @@ def calculate_fcf_growth_rate(financials):
             return 0.03, "Growth rate cannot be estimated, using default 3%"
     except Exception as e:
         return 0.03, f"Error calculating FCF growth rate: {str(e)}, using default 3%"
-
 
 def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
     try:
@@ -827,31 +825,75 @@ def main():
         st.error(f"Error formatting ticker: {str(e)}")
         return
 
-
- for {index_name} constituents..."):
-                    with ThreadPoolExecutor(max_workers=10) as executor:
-                        stocks_data = list(executor.map(get_stock_info, constituents))
+    if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
+        st.session_state.formatted_ticker = format_ticker(ticker)
+        try:
+            with st.spinner(f"Fetching data for {st.session_state.formatted_ticker}..."):
+                st.session_state.data = get_stock_data(st.session_state.formatted_ticker)
                 
-                target_stock = get_stock_info(st.session_state.formatted_ticker)
-                if target_stock['industry'] != 'Unknown':
-                    avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
-                    st.session_state.industry_averages = {
-                        'avg_pe': avg_pe,
-                        'avg_roe': avg_roe,
-                        'industry': target_stock['industry'],
-                        'count': industry_count,
-                        'min_pe': min_pe,
-                        'max_pe': max_pe,
-                        'min_roe': min_roe,
-                        'max_roe': max_roe
-                    }
+                if not st.session_state.data.empty:
+                    st.success(f"Data fetched successfully for {st.session_state.formatted_ticker}")
                 else:
-                    st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
-            else:
-                st.warning(f"Unable to fetch constituents for {index_name}")
+                    st.error(f"No data available for {st.session_state.formatted_ticker}. Please check the ticker symbol.")
+                    return
+
+            # Only fetch industry data if ticker data was successfully loaded
+            if not st.session_state.data.empty:
+                # New section to fetch industry data
+                constituents, index_name = get_index_constituents(ticker)
+                if constituents:
+                    with st.spinner(f"Fetching data for {index_name} constituents (this may take some time)..."):
+                        # Limit the number of constituents to analyze to avoid rate limiting
+                        # Just pick companies in same sector if possible
+                        target_stock = get_stock_info(st.session_state.formatted_ticker)
+                        filtered_constituents = constituents
+                        
+                        # For large indices, take a sample instead of all constituents
+                        if len(constituents) > 30:
+                            random.seed(hash(st.session_state.formatted_ticker))  # Use ticker as seed for consistent sampling
+                            sample_size = min(30, len(constituents))
+                            filtered_constituents = random.sample(constituents, sample_size)
+                            st.info(f"Analyzing a sample of {sample_size} companies from {index_name} to avoid rate limiting.")
+                        
+                        # Process constituents with a small batch size to avoid rate limiting
+                        stocks_data = []
+                        batch_size = 5  # Process in small batches
+                        
+                        for i in range(0, len(filtered_constituents), batch_size):
+                            batch = filtered_constituents[i:i+batch_size]
+                            progress_text = f"Processing companies {i+1}-{min(i+batch_size, len(filtered_constituents))} of {len(filtered_constituents)}"
+                            st.text(progress_text)
+                            
+                            with ThreadPoolExecutor(max_workers=3) as executor:  # Reduced max_workers
+                                batch_data = list(executor.map(get_stock_info, batch))
+                                stocks_data.extend(batch_data)
+                            
+                            # Add a delay between batches to avoid rate limiting
+                            if i + batch_size < len(filtered_constituents):
+                                time.sleep(2)  # 2 second delay between batches
+                    
+                    target_stock = get_stock_info(st.session_state.formatted_ticker)
+                    if target_stock['industry'] != 'Unknown':
+                        avg_pe, avg_roe, industry_count, min_pe, max_pe, min_roe, max_roe = calculate_industry_averages(stocks_data, target_stock['industry'])
+                        st.session_state.industry_averages = {
+                            'avg_pe': avg_pe,
+                            'avg_roe': avg_roe,
+                            'industry': target_stock['industry'],
+                            'count': industry_count,
+                            'min_pe': min_pe,
+                            'max_pe': max_pe,
+                            'min_roe': min_roe,
+                            'max_roe': max_roe
+                        }
+                    else:
+                        st.warning(f"Unable to fetch industry information for {st.session_state.formatted_ticker}")
+                else:
+                    st.warning(f"Unable to fetch constituents for {index_name}")
 
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
+            import traceback
+            st.code(traceback.format_exc(), language="python")
 
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
@@ -869,7 +911,7 @@ def main():
                 st.markdown("### DCF Model Inputs")
                 market_risk_premium = st.number_input("Market Risk Premium (%):", value=8.5, step=0.1)
                 terminal_growth_rate = st.number_input("Terminal Growth Rate (%):", value=3.0, step=0.1)
-                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate(), step=0.01)
+                risk_free_rate = st.number_input("Risk-Free Rate (%):", value=get_risk_free_rate() * 100, step=0.01) / 100
                 high_growth_period = st.number_input("High Growth Period (years):", value=5, step=1, min_value=1)
 
             with col2:
@@ -1299,13 +1341,13 @@ def main():
                     st.error(f"Error calculating DCF valuation: {str(e)}")
                     import traceback
                     st.write("Debug information:")
-                    st.code(traceback.format_exc())
+                    st.code(traceback.format_exc(), language="python")
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
             import traceback
             st.write("Debug information:")
-            st.code(traceback.format_exc())
+            st.code(traceback.format_exc(), language="python")
     else:
         st.warning("No data available. Please check the ticker symbol and try again.")
 
