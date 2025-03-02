@@ -210,7 +210,7 @@ def calculate_volume_profile(data, bins=40):
     
     return volume_profile, bin_centers, bin_size, poc_price, value_area_low, value_area_high
 
-def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, strike_name, knockout_name):
+def plot_stock_chart(data, ticker):
     fig = go.Figure()
 
     # Candlestick chart with custom colors
