@@ -8,8 +8,77 @@ import requests
 from bs4 import BeautifulSoup
 import plotly.io as pio
 import os
+import time
+import random
+import json
+from pathlib import Path
 from yahoofinancials import YahooFinancials
 from concurrent.futures import ThreadPoolExecutor
+
+# Create cache directory if it doesn't exist
+cache_dir = Path("cache")
+cache_dir.mkdir(exist_ok=True)
+
+# Function to create a cache key from ticker and period
+def get_cache_key(ticker, data_type, period="1y"):
+    return f"{ticker}_{data_type}_{period}.json"
+
+# Function to save data to cache
+def save_to_cache(data, ticker, data_type, period="1y"):
+    cache_key = get_cache_key(ticker, data_type, period)
+    cache_path = cache_dir / cache_key
+    
+    # Convert datetime index to string for serialization
+    if isinstance(data, pd.DataFrame) and isinstance(data.index, pd.DatetimeIndex):
+        data_dict = {
+            "index": data.index.strftime("%Y-%m-%d %H:%M:%S").tolist(),
+            "data": data.to_dict(orient="records")
+        }
+    else:
+        data_dict = data
+        
+    with open(cache_path, "w") as f:
+        json.dump(data_dict, f)
+
+# Function to load data from cache
+def load_from_cache(ticker, data_type, period="1y"):
+    cache_key = get_cache_key(ticker, data_type, period)
+    cache_path = cache_dir / cache_key
+    
+    if cache_path.exists():
+        # Check if cache is recent (less than 24 hours old)
+        if time.time() - cache_path.stat().st_mtime < 86400:  # 24 hours in seconds
+            with open(cache_path, "r") as f:
+                data_dict = json.load(f)
+                
+            # Reconstruct DataFrame if it's a DataFrame
+            if isinstance(data_dict, dict) and "index" in data_dict and "data" in data_dict:
+                df = pd.DataFrame(data_dict["data"])
+                df.index = pd.DatetimeIndex(data_dict["index"])
+                return df
+            return data_dict
+    return None
+
+# Add rate limiting function
+def rate_limited_request(func, *args, **kwargs):
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            # Add a small random delay to avoid bursts of requests
+            time.sleep(random.uniform(0.1, 0.5))
+            return func(*args, **kwargs)
+        except Exception as e:
+            if "Too Many Requests" in str(e) or "Rate limit" in str(e):
+                if attempt < max_retries - 1:  # Don't sleep on the last attempt
+                    wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                    st.warning(f"Rate limited, waiting {wait_time:.1f} seconds before retrying...")
+                    time.sleep(wait_time)
+                else:
+                    raise Exception("Too many requests. Please try again later.") from e
+            else:
+                raise  # Re-raise if it's not a rate limit error
 
 # Set page to wide mode
 st.set_page_config(layout="wide")
@@ -23,10 +92,29 @@ st.warning("""
 
 
 def get_stock_data(ticker, period="1y"):
-    stock = yf.Ticker(ticker)
-    data = stock.history(period=period)
-    data = data.dropna()
-    return data
+    # Try to load from cache first
+    cached_data = load_from_cache(ticker, "history", period)
+    if cached_data is not None:
+        return cached_data
+    
+    try:
+        # Use rate limited request with exponential backoff
+        def fetch_data():
+            stock = yf.Ticker(ticker)
+            data = stock.history(period=period)
+            data = data.dropna()
+            return data
+        
+        data = rate_limited_request(fetch_data)
+        
+        # Save to cache for future use
+        if not data.empty:
+            save_to_cache(data, ticker, "history", period)
+        
+        return data
+    except Exception as e:
+        st.error(f"Error fetching stock data: {str(e)}")
+        return pd.DataFrame()
 
 def format_ticker(ticker):
     if ticker.isdigit():
@@ -198,6 +286,12 @@ def plot_stock_chart(data, ticker, strike_price, airbag_price, knockout_price, s
 
 
 def get_index_constituents(ticker):
+    # Create cache key based on index type (Hong Kong or US)
+    index_type = "HSI" if ticker.isdigit() else "SP500"
+    cached_data = load_from_cache("index", index_type)
+    if cached_data is not None:
+        return cached_data["constituents"], cached_data["index_name"]
+    
     if ticker.isdigit():
         # Hong Kong stocks
         url = "https://en.wikipedia.org/wiki/Hang_Seng_Index"
@@ -208,6 +302,7 @@ def get_index_constituents(ticker):
         index_name = "S&P 500"
     
     try:
+        # First check if we already have this info cached
         tables = pd.read_html(url)
         if ticker.isdigit():
             # Look for the table with 'Ticker' and 'Sub-index' columns
@@ -223,11 +318,17 @@ def get_index_constituents(ticker):
             df = tables[0]  # S&P 500 constituents are in the first table
             constituents = df['Symbol'].tolist()
         
-        print(f"Fetched {len(constituents)} constituents for {index_name}")
+        # Cache results
+        save_to_cache({
+            "constituents": constituents,
+            "index_name": index_name
+        }, "index", index_type)
+        
+        st.success(f"Fetched {len(constituents)} constituents for {index_name}")
         print(f"First few constituents: {constituents[:5]}")
         return constituents, index_name
     except Exception as e:
-        print(f"Error fetching constituents for {index_name}: {str(e)}")
+        st.error(f"Error fetching constituents for {index_name}: {str(e)}")
         return [], index_name
 
 # Helper function to format tickers for Yahoo Finance
@@ -238,15 +339,30 @@ def format_ticker(ticker):
         return ticker.upper()
 
 def get_stock_info(symbol):
+    # Try to load from cache first
+    cached_data = load_from_cache(symbol, "stock_info")
+    if cached_data is not None:
+        return cached_data
+        
     try:
-        stock = yf.Ticker(symbol)
-        info = stock.info
-        return {
-            'symbol': symbol,
-            'industry': info.get('industry', 'Unknown'),
-            'pe': info.get('trailingPE', None),
-            'roe': info.get('returnOnEquity', None)
-        }
+        def fetch_stock_info():
+            stock = yf.Ticker(symbol)
+            info = stock.info
+            return {
+                'symbol': symbol,
+                'industry': info.get('industry', 'Unknown'),
+                'pe': info.get('trailingPE', None),
+                'roe': info.get('returnOnEquity', None)
+            }
+        
+        # Add delay between consecutive API calls to prevent rate limiting
+        time.sleep(random.uniform(0.5, 1.0))
+        stock_info = fetch_stock_info()
+        
+        # Save to cache
+        save_to_cache(stock_info, symbol, "stock_info")
+        
+        return stock_info
     except Exception as e:
         print(f"Error fetching data for {symbol}: {str(e)}")
         return {
@@ -273,45 +389,59 @@ def calculate_industry_averages(stocks_data, target_industry):
     return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
 def get_financial_metrics(ticker):
+    # Try to load from cache first
+    cached_data = load_from_cache(ticker, "financial_metrics")
+    if cached_data is not None:
+        return cached_data
+    
     try:
-        stock = yf.Ticker(ticker)
-        info = stock.info
+        # Use rate limiting to prevent API throttling
+        def fetch_metrics():
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            
+            metrics = {
+                "Sector": info.get("sector", "N/A"),
+                "Industry": info.get("industry", "N/A"),
+                "Market Cap": info.get("marketCap", "N/A"),
+                "Outstanding Shares": info.get("sharesOutstanding", "N/A"),       
+                "Historical P/E": info.get("trailingPE", "N/A"),
+                "Forward P/E": info.get("forwardPE", "N/A"),
+                "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
+                "Historical Dividend(%)": info.get("trailingAnnualDividendYield", 0) * 100,
+                "Price/Book": info.get("priceToBook", "N/A"),
+                "Net Income": info.get("netIncomeToCommon", "N/A"),
+                "Revenue": info.get("totalRevenue", "N/A"),
+                "Profit Margin": info.get("profitMargins", "N/A"),
+                "ROE": info.get("returnOnEquity", "N/A"),
+            }
+            
+            # Format large numbers
+            for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
+                if isinstance(metrics[key], (int, float)) and metrics[key] is not None:
+                    if abs(metrics[key]) >= 1e12:
+                        metrics[key] = f"{metrics[key]/1e12:.2f}T"
+                    elif abs(metrics[key]) >= 1e9:
+                        metrics[key] = f"{metrics[key]/1e9:.2f}B"
+                    elif abs(metrics[key]) >= 1e6:
+                        metrics[key] = f"{metrics[key]/1e6:.2f}M"
+            
+            # Format percentages
+            for key in ["Profit Margin", "ROE"]:
+                if isinstance(metrics[key], float) and metrics[key] is not None:
+                    metrics[key] = f"{metrics[key]:.2%}"
+            
+            # Round floating point numbers
+            for key, value in metrics.items():
+                if isinstance(value, float) and value is not None:
+                    metrics[key] = round(value, 2)
+            
+            return metrics
         
-        metrics = {
-            "Sector": info.get("sector", "N/A"),
-            "Industry": info.get("industry", "N/A"),
-            "Market Cap": info.get("marketCap", "N/A"),
-            "Outstanding Shares": info.get("sharesOutstanding", "N/A"),       
-            "Historical P/E": info.get("trailingPE", "N/A"),
-            "Forward P/E": info.get("forwardPE", "N/A"),
-            "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
-            "Historical Dividend(%)": info.get("trailingAnnualDividendYield", 0) * 100,
-            "Price/Book": info.get("priceToBook", "N/A"),
-            "Net Income": info.get("netIncomeToCommon", "N/A"),
-            "Revenue": info.get("totalRevenue", "N/A"),
-            "Profit Margin": info.get("profitMargins", "N/A"),
-            "ROE": info.get("returnOnEquity", "N/A"),
-        }
+        metrics = rate_limited_request(fetch_metrics)
         
-        # Format large numbers
-        for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
-            if isinstance(metrics[key], (int, float)) and metrics[key] is not None:
-                if abs(metrics[key]) >= 1e12:
-                    metrics[key] = f"{metrics[key]/1e12:.2f}T"
-                elif abs(metrics[key]) >= 1e9:
-                    metrics[key] = f"{metrics[key]/1e9:.2f}B"
-                elif abs(metrics[key]) >= 1e6:
-                    metrics[key] = f"{metrics[key]/1e6:.2f}M"
-        
-        # Format percentages
-        for key in ["Profit Margin", "ROE"]:
-            if isinstance(metrics[key], float) and metrics[key] is not None:
-                metrics[key] = f"{metrics[key]:.2%}"
-        
-        # Round floating point numbers
-        for key, value in metrics.items():
-            if isinstance(value, float) and value is not None:
-                metrics[key] = round(value, 2)
+        # Save to cache
+        save_to_cache(metrics, ticker, "financial_metrics")
         
         return metrics
     except Exception as e:
@@ -345,58 +475,87 @@ def get_risk_free_rate():
     
 
 def get_financial_data(ticker):
+    # Try to load from cache first
+    cached_data = load_from_cache(ticker, "financial_data")
+    if cached_data is not None:
+        return cached_data
+    
     try:
-        stock = yf.Ticker(ticker)
-        financials = {}
-        
-        # Balance sheet data
-        balance_sheet = stock.balance_sheet
-        if balance_sheet is None or balance_sheet.empty:
-            raise ValueError("Balance sheet data is empty")
+        def fetch_financial_data():
+            stock = yf.Ticker(ticker)
+            financials = {}
             
-        financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-        financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
-        financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
-        financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
-        #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
-        financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-        financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
-        
-        # Get shares outstanding from info
-        financials['share_issued'] = stock.info.get("sharesOutstanding", 0)
-        
-        # Income statement data
-        income_stmt = stock.financials
-        if income_stmt is None or income_stmt.empty:
-            raise ValueError("Income statement data is empty")
+            # Balance sheet data
+            balance_sheet = stock.balance_sheet
+            if balance_sheet is None or balance_sheet.empty:
+                st.warning(f"Balance sheet data not available for {ticker}")
+            else:
+                financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
+                financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
+                financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
+                financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
+                financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
+                financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
             
-        financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-        financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
-        financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-        financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
-        
-        # Cash flow statement data
-        cash_flow = stock.cashflow
-        if cash_flow is None or cash_flow.empty:
-            raise ValueError("Cash flow data is empty")
+            # Get shares outstanding from info
+            financials['share_issued'] = stock.info.get("sharesOutstanding", 0)
             
-        if 'Free Cash Flow' in cash_flow.index:
-            financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-            financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1] if len(cash_flow.columns) > 1 else None
-            financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2] if len(cash_flow.columns) > 2 else None
-            financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
-        else:
-            # If Free Cash Flow is not available, calculate it
-            operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-            capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
-            financials['fcf_latest'] = operating_cash_flow - capital_expenditures
-            financials['fcf_1years_ago'] = None
-            financials['fcf_2years_ago'] = None
-            financials['fcf_3years_ago'] = None
+            # Income statement data
+            income_stmt = stock.financials
+            if income_stmt is None or income_stmt.empty:
+                st.warning(f"Income statement data not available for {ticker}")
+            else:
+                financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
+                financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
+                financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
+                financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials.get('net_income', 0) + financials.get('income_tax', 0))
+            
+            # Cash flow statement data
+            cash_flow = stock.cashflow
+            if cash_flow is None or cash_flow.empty:
+                st.warning(f"Cash flow data not available for {ticker}")
+                financials['fcf_latest'] = 0
+                financials['fcf_1years_ago'] = None
+                financials['fcf_2years_ago'] = None
+                financials['fcf_3years_ago'] = None
+            else:
+                if 'Free Cash Flow' in cash_flow.index:
+                    financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
+                    financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1] if len(cash_flow.columns) > 1 else None
+                    financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2] if len(cash_flow.columns) > 2 else None
+                    financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+                else:
+                    # If Free Cash Flow is not available, calculate it
+                    operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
+                    capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
+                    financials['fcf_latest'] = operating_cash_flow - capital_expenditures
+                    financials['fcf_1years_ago'] = None
+                    financials['fcf_2years_ago'] = None
+                    financials['fcf_3years_ago'] = None
 
-        # Additional info
-        financials['shares_outstanding'] = stock.info.get('sharesOutstanding', 0)
-        financials['market_cap'] = stock.info.get('marketCap', 0)
+            # Additional info
+            financials['shares_outstanding'] = stock.info.get('sharesOutstanding', 0)
+            financials['market_cap'] = stock.info.get('marketCap', 0)
+            
+            # Initialize any missing keys with zero values
+            default_fields = [
+                'total_debt', 'cash', 'cash_equivalents', 'cash_and_cash_equivalents',
+                'total_equity', 'net_debt', 'share_issued', 'interest_expense',
+                'income_tax', 'net_income', 'pre_tax_income', 'fcf_latest',
+                'fcf_1years_ago', 'fcf_2years_ago', 'fcf_3years_ago',
+                'shares_outstanding', 'market_cap'
+            ]
+            
+            for field in default_fields:
+                if field not in financials:
+                    financials[field] = 0
+            
+            return financials
+        
+        financials = rate_limited_request(fetch_financial_data)
+        
+        # Save to cache
+        save_to_cache(financials, ticker, "financial_data")
         
         return financials
     except Exception as e:
@@ -555,7 +714,38 @@ def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth
 
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
-
+    
+    # Create cache management UI
+    with st.sidebar:
+        st.header("Cache Management")
+        clear_cache = st.button("Clear All Cache")
+        if clear_cache:
+            # Delete all files in cache directory
+            for cached_file in cache_dir.glob("*"):
+                cached_file.unlink()
+            st.success("Cache cleared successfully!")
+            
+        # Display cache info
+        cache_files = list(cache_dir.glob("*"))
+        if cache_files:
+            cache_size = sum(f.stat().st_size for f in cache_files) / 1024
+            st.info(f"Cache size: {cache_size:.2f} KB, {len(cache_files)} files")
+        else:
+            st.info("Cache is empty")
+        
+        st.markdown("---")
+        
+        # Add toggle for throttling
+        enable_throttling = st.checkbox("Enable API throttling", value=True, 
+                                     help="Enable to prevent rate limiting by slowing down API requests")
+        if enable_throttling:
+            st.session_state.throttle_delay = st.slider("Request delay (seconds)", 0.1, 3.0, 1.0, 0.1,
+                                                   help="Time to wait between API requests")
+        else:
+            st.session_state.throttle_delay = 0.0
+        
+        st.markdown("---")
+    
     # Create two columns for layout
     col1, col2 = st.columns([1, 4])
 
@@ -568,6 +758,11 @@ def main():
         knockout_pct = st.number_input(f"{knockout_name} %:", value=0.0)
         strike_pct = st.number_input(f"{strike_name} %:", value=0.0)
         airbag_pct = st.number_input("Airbag Price %:", value=0.0)
+        
+        # Add option for cached data only
+        use_cached_only = st.checkbox("Use cached data only", value=False,
+                                    help="If checked, the app will only use cached data and won't make new API calls")
+        st.session_state.use_cached_only = use_cached_only
                
         refresh = st.button("Refresh Data")
 
@@ -578,16 +773,7 @@ def main():
         return
 
 
-    if 'formatted_ticker' not in st.session_state or ticker != st.session_state.formatted_ticker or refresh:
-        st.session_state.formatted_ticker = format_ticker(ticker)
-        try:
-            st.session_state.data = get_stock_data(st.session_state.formatted_ticker)
-            st.success(f"Data fetched successfully for {st.session_state.formatted_ticker}")
-
-            # New section to fetch industry data
-            constituents, index_name = get_index_constituents(ticker)
-            if constituents:
-                with st.spinner(f"Fetching data for {index_name} constituents..."):
+ for {index_name} constituents..."):
                     with ThreadPoolExecutor(max_workers=10) as executor:
                         stocks_data = list(executor.map(get_stock_info, constituents))
                 
