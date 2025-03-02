@@ -1129,7 +1129,7 @@ def main():
                     
                     # Perform Valuation based on sector
                     if sector == 'Financial Services':
-                        fair_value, error_message = calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate/100)
+                        fair_value, error_message = calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate/100, high_growth_period)
                         valuation_method = "Excess Return Model (for Financial company)"
                     else:
                         fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
