@@ -1,6 +1,3 @@
-I'll provide the complete code in a single block for your Streamlit stock analysis application. This version incorporates all the fixes for the indentation errors and adds rate limiting and caching to prevent "Too Many Requests" errors:
-
-```python
 import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
