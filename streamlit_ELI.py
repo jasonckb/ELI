@@ -930,8 +930,7 @@ def main():
                     st.error(f"Error fetching financial metrics: {str(e)}")
 
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
-                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
-                                       strike_price)
+                fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker)
                 st.plotly_chart(fig, use_container_width=True)               
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
