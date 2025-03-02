@@ -931,8 +931,7 @@ def main():
 
                 st.markdown("<h3>Stock Chart:</h3>", unsafe_allow_html=True)
                 fig = plot_stock_chart(st.session_state.data, st.session_state.formatted_ticker, 
-                                       strike_price, airbag_price, knockout_price,
-                                       strike_name, knockout_name)
+                                       strike_price)
                 st.plotly_chart(fig, use_container_width=True)               
 
                 st.markdown("<h3>Latest News:</h3>", unsafe_allow_html=True)
