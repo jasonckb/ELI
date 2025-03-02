@@ -906,14 +906,12 @@ def main():
     if hasattr(st.session_state, 'data') and not st.session_state.data.empty:
         try:
             current_price = st.session_state.data['Close'].iloc[-1]
-            strike_price, airbag_price, knockout_price = calculate_price_levels(current_price, strike_pct, airbag_pct, knockout_pct)
+            s
             
             with col1:
                 st.markdown("<h3>Price Levels:</h3>", unsafe_allow_html=True)
                 st.markdown(f"<h4>Current Price: {current_price:.2f}</h4>", unsafe_allow_html=True)
-                st.markdown(f"<p>{knockout_name} ({knockout_pct}%): {knockout_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>{strike_name} ({strike_pct}%): {strike_price:.2f}</p>", unsafe_allow_html=True)
-                st.markdown(f"<p>Airbag Price ({airbag_pct}%): {airbag_price:.2f}</p>", unsafe_allow_html=True)
+                
 
                 # DCF Model Inputs
                 st.markdown("### DCF Model Inputs")
