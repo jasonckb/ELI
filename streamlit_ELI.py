@@ -11,25 +11,8 @@ import os
 from yahoofinancials import YahooFinancials
 from concurrent.futures import ThreadPoolExecutor
 
-# Set page configuration
-st.set_page_config(
-    layout="wide",
-    page_title="Stock Analysis Dashboard",
-    page_icon="📈"
-)
-
-# Initialize session state for DCF inputs
-if 'market_risk_premium' not in st.session_state:
-    st.session_state.market_risk_premium = 8.5
-if 'terminal_growth_rate' not in st.session_state:
-    st.session_state.terminal_growth_rate = 3.0
-if 'risk_free_rate' not in st.session_state:
-    st.session_state.risk_free_rate = None
-if 'high_growth_period' not in st.session_state:
-    st.session_state.high_growth_period = 5
-if 'dcf_update' not in st.session_state:
-    st.session_state.dcf_update = False
-
+# Set page to wide mode
+st.set_page_config(layout="wide")
 
 st.warning("""
     **Disclaimer:**
@@ -39,44 +22,11 @@ st.warning("""
 """)
 
 
-def format_large_number(number):
-    """Format large numbers with proper type checking"""
-    try:
-        if isinstance(number, str):
-            return number
-        if not isinstance(number, (int, float)):
-            return "N/A"
-        if abs(number) >= 1e9:
-            return f"${number/1e9:.2f}B"
-        elif abs(number) >= 1e6:
-            return f"${number/1e6:.2f}M"
-        else:
-            return f"${number:,.2f}"
-    except Exception:
-        return "N/A"
-
-@st.cache_data(ttl=3600)
 def get_stock_data(ticker, period="1y"):
-    """Fetch stock data with caching"""
-    try:
-        stock = yf.Ticker(ticker)
-        data = stock.history(period=period)
-        if data.empty:
-            raise ValueError(f"No data found for ticker {ticker}")
-        return data.dropna()
-    except Exception as e:
-        st.error(f"Error fetching data: {str(e)}")
-        return None
-
-@st.cache_data(ttl=3600)
-def get_risk_free_rate():
-    """Get risk-free rate with caching"""
-    try:
-        treasury_ticker = "^TNX"
-        treasury_data = yf.Ticker(treasury_ticker).history(period="1d")
-        return treasury_data['Close'].iloc[-1] / 100
-    except:
-        return 0.035
+    stock = yf.Ticker(ticker)
+    data = stock.history(period=period)
+    data = data.dropna()
+    return data
 
 def format_ticker(ticker):
     if ticker.isdigit():
@@ -323,105 +273,6 @@ def calculate_industry_averages(stocks_data, target_industry):
     return avg_pe, avg_roe, len(industry_stocks), min_pe, max_pe, min_roe, max_roe
 
 def get_financial_metrics(ticker):
-    stock = yf.Ticker(ticker)
-    info = stock.info
-    
-    metrics = {
-        "Sector": info.get("sector", "N/A"),
-        "Industry": info.get("industry", "N/A"),
-        "Market Cap": info.get("marketCap", "N/A"),
-        "Outstanding Shares": info.get("sharesOutstanding", "N/A"),       
-        "Historical P/E": info.get("trailingPE", "N/A"),
-        "Forward P/E": info.get("forwardPE", "N/A"),
-        "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
-        "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100,
-        "Price/Book": info.get("priceToBook", "N/A"),
-        "Net Income": info.get("netIncomeToCommon", "N/A"),
-        "Revenue": info.get("totalRevenue", "N/A"),
-        "Profit Margin": info.get("profitMargins", "N/A"),
-        "ROE": info.get("returnOnEquity", "N/A"),
-    }
-    
-    # Format large numbers
-    for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
-        if isinstance(metrics[key], (int, float)):
-            if abs(metrics[key]) >= 1e12:
-                metrics[key] = f"{metrics[key]/1e12:.2f}T"
-            elif abs(metrics[key]) >= 1e9:
-                metrics[key] = f"{metrics[key]/1e9:.2f}B"
-            elif abs(metrics[key]) >= 1e6:
-                metrics[key] = f"{metrics[key]/1e6:.2f}M"
-    
-    # Format percentages
-    for key in ["Profit Margin", "ROE"]:
-        if isinstance(metrics[key], float):
-            metrics[key] = f"{metrics[key]:.2%}"
-    
-    # Round floating point numbers
-    for key, value in metrics.items():
-        if isinstance(value, float):
-            metrics[key] = round(value, 2)
-    
-    return metrics
-# Helper functions for DCF model
-
-def get_risk_free_rate():
-    try:
-        treasury_ticker = "^TNX"  # 10-year Treasury Yield
-        treasury_data = yf.Ticker(treasury_ticker).history(period="1d")
-        return treasury_data['Close'].iloc[-1] / 100  # Convert to decimal
-    except:
-        return 0.035  # Default to 3.5% if unable to fetch
-    
-
-@st.cache_data(ttl=3600)
-def get_financial_data(ticker):
-    """Get financial data with caching"""
-    try:
-        stock = yf.Ticker(ticker)
-        financials = {}
-        
-        # Balance sheet data
-        balance_sheet = stock.balance_sheet
-        financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
-        financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
-        financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
-        financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
-        financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
-        financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
-        financials['share_issued'] = stock.info.get("sharesOutstanding", "N/A")
-        
-        # Income statement data
-        income_stmt = stock.financials
-        financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
-        financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
-        financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
-        financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
-        
-        # Cash flow statement data
-        cash_flow = stock.cashflow
-        if 'Free Cash Flow' in cash_flow.index:
-            financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
-            financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1]
-            financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2]
-            financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
-        else:
-            operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
-            capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
-            financials['fcf_latest'] = operating_cash_flow - capital_expenditures
-            financials['fcf_3years_ago'] = None
-
-        financials['shares_outstanding'] = stock.info.get('sharesOutstanding')
-        financials['market_cap'] = stock.info.get('marketCap')
-        
-        return financials
-    except Exception as e:
-        st.error(f"Error fetching financial data: {str(e)}")
-        return None
-
-@st.cache_data(ttl=3600)
-def get_financial_metrics(ticker):
-    """Get financial metrics with caching"""
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
@@ -434,7 +285,7 @@ def get_financial_metrics(ticker):
             "Historical P/E": info.get("trailingPE", "N/A"),
             "Forward P/E": info.get("forwardPE", "N/A"),
             "PEG Ratio (5yr expected)": info.get("pegRatio", "N/A"),
-            "Historical Dividend(%)": info.get("trailingAnnualDividendYield", "N/A")*100 if info.get("trailingAnnualDividendYield") else "N/A",
+            "Historical Dividend(%)": info.get("trailingAnnualDividendYield", 0) * 100,
             "Price/Book": info.get("priceToBook", "N/A"),
             "Net Income": info.get("netIncomeToCommon", "N/A"),
             "Revenue": info.get("totalRevenue", "N/A"),
@@ -444,122 +295,210 @@ def get_financial_metrics(ticker):
         
         # Format large numbers
         for key in ["Market Cap", "Net Income", "Revenue", "Outstanding Shares"]:
-            if isinstance(metrics[key], (int, float)):
-                metrics[key] = format_large_number(metrics[key])
+            if isinstance(metrics[key], (int, float)) and metrics[key] is not None:
+                if abs(metrics[key]) >= 1e12:
+                    metrics[key] = f"{metrics[key]/1e12:.2f}T"
+                elif abs(metrics[key]) >= 1e9:
+                    metrics[key] = f"{metrics[key]/1e9:.2f}B"
+                elif abs(metrics[key]) >= 1e6:
+                    metrics[key] = f"{metrics[key]/1e6:.2f}M"
         
         # Format percentages
         for key in ["Profit Margin", "ROE"]:
-            if isinstance(metrics[key], float):
+            if isinstance(metrics[key], float) and metrics[key] is not None:
                 metrics[key] = f"{metrics[key]:.2%}"
+        
+        # Round floating point numbers
+        for key, value in metrics.items():
+            if isinstance(value, float) and value is not None:
+                metrics[key] = round(value, 2)
         
         return metrics
     except Exception as e:
-        st.error(f"Error fetching financial metrics: {str(e)}")
-        return None
-    
-def calculate_fcf_growth_rate(financials):
-    """Calculate the Free Cash Flow growth rate based on historical data"""
-    try:
-        # Get historical FCF values
-        fcf_3years_ago = financials.get('fcf_3years_ago')
-        fcf_2years_ago = financials.get('fcf_2years_ago')
-        fcf_latest = financials.get('fcf_latest')
-        
-        if not all([fcf_3years_ago, fcf_2years_ago, fcf_latest]):
-            return 0.03, "Missing historical FCF data, using default growth rate of 3%"
-        
-        # Calculate 3-year and 2-year growth rates
-        growth_rate_3yr = (fcf_latest / fcf_3years_ago) ** (1/3) - 1
-        growth_rate_2yr = (fcf_latest / fcf_2years_ago) ** (1/2) - 1
-        
-        # Use weighted average of growth rates (more weight to recent growth)
-        weighted_growth_rate = (growth_rate_2yr * 0.6) + (growth_rate_3yr * 0.4)
-        
-        # Cap the growth rate between -20% and 20% for reasonable projections
-        capped_growth_rate = max(min(weighted_growth_rate, 0.20), -0.20)
-        
-        return capped_growth_rate, None
-        
-    except Exception as e:
-        return 0.03, f"Error calculating FCF growth rate: {str(e)}"
+        st.error(f"Error getting financial metrics: {str(e)}")
+        # Return empty metrics with N/A values as fallback
+        return {
+            "Sector": "N/A",
+            "Industry": "N/A",
+            "Market Cap": "N/A",
+            "Outstanding Shares": "N/A",       
+            "Historical P/E": "N/A",
+            "Forward P/E": "N/A",
+            "PEG Ratio (5yr expected)": "N/A",
+            "Historical Dividend(%)": "N/A",
+            "Price/Book": "N/A",
+            "Net Income": "N/A",
+            "Revenue": "N/A",
+            "Profit Margin": "N/A",
+            "ROE": "N/A",
+        }
 
+# Helper functions for DCF model
+
+def get_risk_free_rate():
+    try:
+        treasury_ticker = "^TNX"  # 10-year Treasury Yield
+        treasury_data = yf.Ticker(treasury_ticker).history(period="1d")
+        return treasury_data['Close'].iloc[-1] / 100  # Convert to decimal
+    except:
+        return 0.035  # Default to 3.5% if unable to fetch
+    
+
+def get_financial_data(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        financials = {}
+        
+        # Balance sheet data
+        balance_sheet = stock.balance_sheet
+        if balance_sheet is None or balance_sheet.empty:
+            raise ValueError("Balance sheet data is empty")
+            
+        financials['total_debt'] = balance_sheet.loc['Total Debt'].iloc[0] if 'Total Debt' in balance_sheet.index else 0
+        financials['cash'] = balance_sheet.loc['Cash Financial'].iloc[0] if 'Cash Financial' in balance_sheet.index else 0
+        financials['cash_equivalents'] = balance_sheet.loc['Cash Equivalents'].iloc[0] if 'Cash Equivalents' in balance_sheet.index else 0
+        financials['cash_and_cash_equivalents'] = balance_sheet.loc['Cash Cash Equivalents And Short Term Investments'].iloc[0] if 'Cash Cash Equivalents And Short Term Investments' in balance_sheet.index else 0
+        #financials['cash_and_cash_equivalents'] = financials['cash'] + financials['cash_equivalents']
+        financials['total_equity'] = balance_sheet.loc['Common Stock Equity'].iloc[0] if 'Common Stock Equity' in balance_sheet.index else 0
+        financials['net_debt'] = balance_sheet.loc['Net Debt'].iloc[0] if 'Net Debt' in balance_sheet.index else 0
+        
+        # Get shares outstanding from info
+        financials['share_issued'] = stock.info.get("sharesOutstanding", 0)
+        
+        # Income statement data
+        income_stmt = stock.financials
+        if income_stmt is None or income_stmt.empty:
+            raise ValueError("Income statement data is empty")
+            
+        financials['interest_expense'] = abs(income_stmt.loc['Interest Expense'].iloc[0]) if 'Interest Expense' in income_stmt.index else 0
+        financials['income_tax'] = income_stmt.loc['Tax Provision'].iloc[0] if 'Tax Provision' in income_stmt.index else 0
+        financials['net_income'] = income_stmt.loc['Net Income'].iloc[0] if 'Net Income' in income_stmt.index else 0
+        financials['pre_tax_income'] = income_stmt.loc['Pretax Income'].iloc[0] if 'Pretax Income' in income_stmt.index else (financials['net_income'] + financials['income_tax'])
+        
+        # Cash flow statement data
+        cash_flow = stock.cashflow
+        if cash_flow is None or cash_flow.empty:
+            raise ValueError("Cash flow data is empty")
+            
+        if 'Free Cash Flow' in cash_flow.index:
+            financials['fcf_latest'] = cash_flow.loc['Free Cash Flow'].iloc[0]
+            financials['fcf_1years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[1] if len(cash_flow.columns) > 1 else None
+            financials['fcf_2years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[2] if len(cash_flow.columns) > 2 else None
+            financials['fcf_3years_ago'] = cash_flow.loc['Free Cash Flow'].iloc[3] if len(cash_flow.columns) > 3 else None
+        else:
+            # If Free Cash Flow is not available, calculate it
+            operating_cash_flow = cash_flow.loc['Operating Cash Flow'].iloc[0] if 'Operating Cash Flow' in cash_flow.index else 0
+            capital_expenditures = abs(cash_flow.loc['Capital Expenditure'].iloc[0]) if 'Capital Expenditure' in cash_flow.index else 0
+            financials['fcf_latest'] = operating_cash_flow - capital_expenditures
+            financials['fcf_1years_ago'] = None
+            financials['fcf_2years_ago'] = None
+            financials['fcf_3years_ago'] = None
+
+        # Additional info
+        financials['shares_outstanding'] = stock.info.get('sharesOutstanding', 0)
+        financials['market_cap'] = stock.info.get('marketCap', 0)
+        
+        return financials
+    except Exception as e:
+        st.error(f"Error getting financial data: {str(e)}")
+        # Return default values to prevent errors
+        return {
+            'total_debt': 0,
+            'cash': 0,
+            'cash_equivalents': 0,
+            'cash_and_cash_equivalents': 0,
+            'total_equity': 0,
+            'net_debt': 0,
+            'share_issued': 0,
+            'interest_expense': 0,
+            'income_tax': 0,
+            'net_income': 0,
+            'pre_tax_income': 0,
+            'fcf_latest': 0,
+            'fcf_1years_ago': 0,
+            'fcf_2years_ago': 0,
+            'fcf_3years_ago': 0,
+            'shares_outstanding': 0,
+            'market_cap': 0
+        }
+    
 def calculate_wacc(financials, risk_free_rate, market_risk_premium, beta):
-    """Calculate Weighted Average Cost of Capital"""
-    # Cost of Equity
-    cost_of_equity = risk_free_rate + beta * market_risk_premium/100
-    
-    # Cost of Debt
-    if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
-        cost_of_debt = financials['interest_expense'] / financials['total_debt']
-    else:
-        cost_of_debt = risk_free_rate
-    
-    # Tax Rate
-    if financials['pre_tax_income'] != 0:
-        tax_rate = financials['income_tax'] / financials['pre_tax_income']
-    else:
-        tax_rate = 0.21  # Assume a default corporate tax rate of 21%
-    
-    # Weights
-    total_capital = financials['total_debt'] + financials['total_equity']
-    if total_capital != 0:
+    try:
+        # Cost of Equity
+        cost_of_equity = risk_free_rate + beta * market_risk_premium/100
+        
+        # Cost of Debt
+        if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
+            cost_of_debt = financials['interest_expense'] / financials['total_debt']
+        else:
+            cost_of_debt = risk_free_rate
+        
+        # Tax Rate
+        pre_tax_income = financials.get('pre_tax_income', 0)
+        if pre_tax_income != 0:
+            tax_rate = financials['income_tax'] / pre_tax_income
+        else:
+            tax_rate = 0.30  # Assume a default tax rate of 30%
+        
+        # Weights
+        total_capital = financials['total_debt'] + financials['total_equity']
+        if total_capital <= 0:
+            return cost_of_equity  # Return cost of equity as fallback
+            
         weight_of_debt = financials['total_debt'] / total_capital
         weight_of_equity = financials['total_equity'] / total_capital
-    else:
-        weight_of_debt = 0
-        weight_of_equity = 1
-    
-    # WACC calculation
-    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
-    
-    return wacc
+        
+        # WACC
+        wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+        
+        return wacc
+    except Exception as e:
+        st.error(f"Error calculating WACC: {str(e)}")
+        return risk_free_rate  # Return risk-free rate as fallback
 
-def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price):
-    """Calculate DCF fair value"""
-    fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
-    
-    if error_message:
-        return None, error_message
-    
-    fcf = financials['fcf_latest']
-    pv_fcf = 0
-    
-    # High growth period
-    for i in range(1, high_growth_period + 1):
-        fcf *= (1 + fcf_growth_rate)
-        pv_fcf += fcf / ((1 + wacc) ** i)
-    
-    # Terminal value
-    terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
-    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
-    
-    # Enterprise Value
-    enterprise_value = pv_fcf + pv_terminal_value
-    
-    # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
-    
-    # Shares outstanding
-    shares_outstanding = financials['share_issued']
-    if shares_outstanding is None:
-        if current_price <= 0:
-            return None, "Invalid current price for calculating shares outstanding"
-        shares_outstanding = equity_value / current_price
-    
-    # Fair value per share
-    fair_value = equity_value / shares_outstanding
-    
-    return fair_value, None
+def calculate_fcf_growth_rate(financials):
+    try:
+        fcf_latest = financials.get('fcf_latest', 0)
+        fcf_1year_ago = financials.get('fcf_1years_ago', 0)
+        fcf_2years_ago = financials.get('fcf_2years_ago', 0)
+        fcf_3years_ago = financials.get('fcf_3years_ago', 0)
+
+        if fcf_latest <= 0 or (fcf_1year_ago is None and fcf_2years_ago is None and fcf_3years_ago is None):
+            return 0.03, "Growth rate cannot be estimated due to negative FCF, using default 3%"
+
+        if fcf_3years_ago is not None and fcf_3years_ago > 0:
+            return (fcf_latest / fcf_3years_ago) ** (1/3) - 1, None
+        elif fcf_2years_ago is not None and fcf_2years_ago > 0:
+            return (fcf_latest / fcf_2years_ago) ** (1/2) - 1, None
+        elif fcf_1year_ago is not None and fcf_1year_ago > 0:
+            return (fcf_latest / fcf_1year_ago) - 1, None
+        else:
+            return 0.03, "Growth rate cannot be estimated, using default 3%"
+    except Exception as e:
+        return 0.03, f"Error calculating FCF growth rate: {str(e)}, using default 3%"
 
 
 def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_growth_rate):
     try:
-        book_value = financials['total_equity']
-        net_income = financials['net_income']
-        shares_outstanding = financials['share_issued']
+        book_value = financials.get('total_equity', 0)
+        if book_value <= 0:
+            return None, "Negative or zero book value"
+            
+        net_income = financials.get('net_income', 0)
+        if net_income <= 0:
+            return None, "Negative or zero net income"
+            
+        shares_outstanding = financials.get('share_issued', 0)
+        if shares_outstanding <= 0:
+            return None, "Share count data unavailable"
 
         roe = net_income / book_value
         excess_return = (roe - cost_of_equity) * book_value
+        
+        # Check if denominator is zero or negative
+        if cost_of_equity <= terminal_growth_rate:
+            return None, "Cost of equity must be greater than terminal growth rate"
+            
         terminal_value = excess_return * (1 + terminal_growth_rate) / (cost_of_equity - terminal_growth_rate)
         equity_value = book_value + terminal_value
         fair_value = equity_value / shares_outstanding
@@ -569,40 +508,50 @@ def calculate_excess_return_fair_value(financials, cost_of_equity, terminal_grow
         return None, f"Error in excess return calculation: {str(e)}"
 
 def calculate_dcf_fair_value(financials, wacc, terminal_growth_rate, high_growth_period, current_price):
-    fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
-    
-    if error_message:
-        return None, error_message
-    
-    fcf = financials['fcf_latest']
-    pv_fcf = 0
-    
-    # High growth period
-    for i in range(1, high_growth_period + 1):
-        fcf *= (1 + fcf_growth_rate)
-        pv_fcf += fcf / ((1 + wacc) ** i)
-    
-    # Terminal value
-    terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
-    pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
-    
-    # Enterprise Value
-    enterprise_value = pv_fcf + pv_terminal_value
-    
-    # Equity Value
-    equity_value = enterprise_value - financials['total_debt'] + financials.get('cash_and_cash_equivalents', 0)
-    
-    # Shares outstanding
-    shares_outstanding = financials['share_issued']
-    if shares_outstanding is None:
-        if current_price <= 0:
-            return None, "Invalid current price for calculating shares outstanding"
-        shares_outstanding = equity_value / current_price
-    
-    # Fair value per share
-    fair_value = equity_value / shares_outstanding
-    
-    return fair_value, None
+    try:
+        fcf_growth_rate, error_message = calculate_fcf_growth_rate(financials)
+        
+        if fcf_growth_rate is None:
+            return None, error_message if error_message else "Unable to calculate FCF growth rate"
+        
+        fcf = financials.get('fcf_latest', 0)
+        if fcf <= 0:
+            return None, "Negative or zero free cash flow"
+            
+        pv_fcf = 0
+        
+        # High growth period
+        for i in range(1, high_growth_period + 1):
+            fcf *= (1 + fcf_growth_rate)
+            pv_fcf += fcf / ((1 + wacc) ** i)
+        
+        # Check if denominator is zero or negative
+        if wacc <= terminal_growth_rate:
+            return None, "WACC must be greater than terminal growth rate"
+            
+        # Terminal value
+        terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
+        pv_terminal_value = terminal_value / ((1 + wacc) ** high_growth_period)
+        
+        # Enterprise Value
+        enterprise_value = pv_fcf + pv_terminal_value
+        
+        # Equity Value
+        equity_value = enterprise_value - financials.get('total_debt', 0) + financials.get('cash_and_cash_equivalents', 0)
+        
+        # Shares outstanding
+        shares_outstanding = financials.get('share_issued', 0)
+        if shares_outstanding <= 0:
+            if current_price <= 0:
+                return None, "Invalid current price and shares outstanding"
+            shares_outstanding = equity_value / current_price
+        
+        # Fair value per share
+        fair_value = equity_value / shares_outstanding
+        
+        return fair_value, None
+    except Exception as e:
+        return None, f"Error in DCF calculation: {str(e)}"
 
 def main():
     st.title("Stock Fundamentals with Key Levels and DCF Valuation by JC")
@@ -704,9 +653,10 @@ def main():
                 try:
                     stock = yf.Ticker(st.session_state.formatted_ticker)
                     
-                    if not stock.recommendations_summary.empty:
+                    recommendations = stock.recommendations_summary
+                    if recommendations is not None and not recommendations.empty:
                         st.subheader("Recommendation Summary")
-                        summary = stock.recommendations_summary.set_index('period')
+                        summary = recommendations.set_index('period')
 
                         col1, col2 = st.columns(2)
 
@@ -720,12 +670,13 @@ def main():
                             }
 
                             for category, color in zip(categories, colors):
-                                fig_summary.add_trace(go.Bar(
-                                    x=[period_labels.get(x, x) for x in summary.index],
-                                    y=summary[category],
-                                    name=category.capitalize(),
-                                    marker_color=color
-                                ))
+                                if category in summary.columns:
+                                    fig_summary.add_trace(go.Bar(
+                                        x=[period_labels.get(x, x) for x in summary.index],
+                                        y=summary[category],
+                                        name=category.capitalize(),
+                                        marker_color=color
+                                    ))
 
                             fig_summary.update_layout(
                                 barmode='stack',
@@ -740,81 +691,89 @@ def main():
                             st.plotly_chart(fig_summary, use_container_width=True)
 
                             # Add rating summary below the chart
-                            latest = summary.iloc[0]
-                            st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
-                            st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
-                            st.markdown(f"""
-                                <table width="100%">
-                                    <tr>
-                                        <td><b>Strong Buy:</b> {latest['strongBuy']}</td>
-                                        <td><b>Buy:</b> {latest['buy']}</td>
-                                        <td><b>Hold:</b> {latest['hold']}</td>
-                                        <td><b>Sell:</b> {latest['sell']}</td>
-                                        <td><b>Strong Sell:</b> {latest['strongSell']}</td>
-                                    </tr>
-                                </table>
-                                """, unsafe_allow_html=True)
-                            st.markdown("</div>", unsafe_allow_html=True)
+                            if not summary.empty:
+                                latest = summary.iloc[0]
+                                st.markdown("<div style='border:1px solid #cccccc; padding:5px; font-size:0.8em;'>", unsafe_allow_html=True)
+                                st.markdown("<p style='text-align:center; font-weight:bold; margin-bottom:5px;'>Current Month's Rating</p>", unsafe_allow_html=True)
+                                
+                                # Build table with available columns
+                                table_html = "<table width='100%'><tr>"
+                                for category in categories:
+                                    if category in latest.index:
+                                        table_html += f"<td><b>{category.capitalize()}:</b> {latest[category]}</td>"
+                                table_html += "</tr></table>"
+                                
+                                st.markdown(table_html, unsafe_allow_html=True)
+                                st.markdown("</div>", unsafe_allow_html=True)
 
                         with col2:
                             price_targets = stock.info
                             current_price = price_targets.get('currentPrice', 0)
+                            if current_price == 0:
+                                current_price = st.session_state.data['Close'].iloc[-1]
+                                
                             target_low = price_targets.get('targetLowPrice', 0)
                             target_mean = price_targets.get('targetMeanPrice', 0)
                             target_high = price_targets.get('targetHighPrice', 0)
 
-                            fig_targets = go.Figure()
+                            # Only display price targets if we have valid data
+                            if target_low > 0 and target_mean > 0 and target_high > 0:
+                                fig_targets = go.Figure()
 
-                            fig_targets.add_trace(go.Indicator(
-                                mode="number+gauge+delta",
-                                value=current_price,
-                                delta={'reference': target_mean, 'position': "top"},
-                                domain={'x': [0, 1], 'y': [0.25, 1]},
-                                title={'text': "Price Target"},
-                                gauge={
-                                    'axis': {'range': [None, target_high], 'tickwidth': 1},
-                                    'bar': {'color': "darkgray"},
-                                    'steps': [
-                                        {'range': [0, target_low], 'color': "red"},
-                                        {'range': [target_low, target_high], 'color': "lightgreen"}
-                                    ],
-                                    'threshold': {
-                                        'line': {'color': "darkgreen", 'width': 4},
-                                        'thickness': 0.75,
-                                        'value': target_mean
+                                fig_targets.add_trace(go.Indicator(
+                                    mode="number+gauge+delta",
+                                    value=current_price,
+                                    delta={'reference': target_mean, 'position': "top"},
+                                    domain={'x': [0, 1], 'y': [0.25, 1]},
+                                    title={'text': "Price Target"},
+                                    gauge={
+                                        'axis': {'range': [None, target_high], 'tickwidth': 1},
+                                        'bar': {'color': "darkgray"},
+                                        'steps': [
+                                            {'range': [0, target_low], 'color': "red"},
+                                            {'range': [target_low, target_high], 'color': "lightgreen"}
+                                        ],
+                                        'threshold': {
+                                            'line': {'color': "darkgreen", 'width': 4},
+                                            'thickness': 0.75,
+                                            'value': target_mean
+                                        }
                                     }
-                                }
-                            ))
+                                ))
 
-                            fig_targets.update_layout(
-                                title="Analyst Price Targets",
-                                height=500,
-                                margin=dict(l=50, r=50, t=50, b=70),
-                            )
+                                fig_targets.update_layout(
+                                    title="Analyst Price Targets",
+                                    height=500,
+                                    margin=dict(l=50, r=50, t=50, b=70),
+                                )
 
-                            annotation_text = (
-                                f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
-                                f"Green Line: Average target @ ${target_mean:.2f}<br>"
-                                f"Gray Bar: Current price  @ ${current_price:.2f}"
-                            )
-                            fig_targets.add_annotation(
-                                x=0.5,
-                                y=0,
-                                xref="paper",
-                                yref="paper",
-                                text=annotation_text,
-                                showarrow=False,
-                                font=dict(size=12),
-                                align="left",
-                                xanchor="center",
-                                yanchor="top",
-                                bordercolor="black",
-                                borderwidth=1,
-                                borderpad=10,
-                                bgcolor="white",
-                            )
+                                annotation_text = (
+                                    f"Green Zone: Target range ${target_low:.2f} - ${target_high:.2f}<br>"
+                                    f"Green Line: Average target @ ${target_mean:.2f}<br>"
+                                    f"Gray Bar: Current price  @ ${current_price:.2f}"
+                                )
+                                fig_targets.add_annotation(
+                                    x=0.5,
+                                    y=0,
+                                    xref="paper",
+                                    yref="paper",
+                                    text=annotation_text,
+                                    showarrow=False,
+                                    font=dict(size=12),
+                                    align="left",
+                                    xanchor="center",
+                                    yanchor="top",
+                                    bordercolor="black",
+                                    borderwidth=1,
+                                    borderpad=10,
+                                    bgcolor="white",
+                                )
 
-                            st.plotly_chart(fig_targets, use_container_width=True)
+                                st.plotly_chart(fig_targets, use_container_width=True)
+                            else:
+                                st.info("Analyst price targets not available for this stock")
+                    else:
+                        st.info("Analyst recommendations not available for this stock")
 
                 except Exception as e:
                     st.error(f"Error fetching analyst ratings: {str(e)}")
@@ -833,14 +792,14 @@ def main():
                     
                     # Calculate and display WACC components
                     stock = yf.Ticker(st.session_state.formatted_ticker)
-                    beta = stock.info.get('beta', 1)  # Default to 1 if beta is not available
-                     
-                    roe = financials['net_income'] / financials['total_equity']
+                    beta = stock.info.get('beta', 1.0)  # Default to 1 if beta is not available
                     
-                    # Calculate WACC using the dedicated function
-                    wacc = calculate_wacc(financials, risk_free_rate, market_risk_premium, beta)
+                    # Check for zero/invalid values to prevent division by zero
+                    if financials['total_equity'] > 0 and financials['net_income'] != 0:
+                        roe = financials['net_income'] / financials['total_equity']
+                    else:
+                        roe = 0
                     
-                    # Calculate cost of equity for display purposes
                     cost_of_equity = risk_free_rate + beta * (market_risk_premium/100)
                     
                     if financials['total_debt'] != 0 and financials['interest_expense'] != 0:
@@ -854,14 +813,19 @@ def main():
                         tax_rate = 0.21  # Assume a default corporate tax rate of 21%                    
                     
                     total_capital = financials['total_debt'] + financials['total_equity']
-                    if total_capital != 0:
+                    if total_capital > 0:
                         weight_of_debt = financials['total_debt'] / total_capital
                         weight_of_equity = financials['total_equity'] / total_capital
                     else:
                         weight_of_debt = 0
                         weight_of_equity = 1                    
-
-                    pe = stock.info.get('trailingPE', 'NA')
+                    
+                    wacc = (weight_of_equity * cost_of_equity) + (weight_of_debt * cost_of_debt * (1 - tax_rate))
+                    
+                    # Fallback to fetching PE from info if available
+                    pe = stock.info.get('trailingPE', None)
+                    if pe is None or pe <= 0:
+                        pe = "N/A"
                     
                     # Calculate and display FCF Growth Rate
                     fcf_growth_rate, fcf_error = calculate_fcf_growth_rate(financials)
@@ -873,7 +837,6 @@ def main():
                     else:
                         fair_value, error_message = calculate_dcf_fair_value(financials, wacc, terminal_growth_rate/100, high_growth_period, current_price)
                         valuation_method = "Discounted Cash Flow (DCF) Model (Inapplicable to Negative FCF)"
-
                     
                    
                     st.markdown(f"<h4>Fair Value by {valuation_method}:</h4>", unsafe_allow_html=True)
@@ -904,7 +867,7 @@ def main():
                         st.markdown(f"<p><b>WACC:</b> {wacc:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Risk-free rate:</b> {risk_free_rate:.2%}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Beta:</b> {beta:.2f}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Historical PE:</b> {pe:.2f}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Historical PE:</b> {pe}</p>", unsafe_allow_html=True)
                         st.markdown(f"<p><b>Historical ROE:</b> {roe:.2%}</p>", unsafe_allow_html=True)
                         if isinstance(fcf_growth_rate, (int, float)):
                             st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
@@ -918,49 +881,69 @@ def main():
                         
 
                     with col3:
-                        # FCF Trend Chart                        
-                        fcf_data = pd.DataFrame({
+                        # FCF Trend Chart
+                        fcf_data = {
                             'Year': ['3 years ago', '2 years ago', '1 year ago', 'Latest'],
-                            'FCF': [financials['fcf_3years_ago'], financials['fcf_2years_ago'], 
-                                    financials['fcf_1years_ago'], financials['fcf_latest']]
-                        })
+                            'FCF': [
+                                financials.get('fcf_3years_ago', 0), 
+                                financials.get('fcf_2years_ago', 0), 
+                                financials.get('fcf_1years_ago', 0), 
+                                financials.get('fcf_latest', 0)
+                            ]
+                        }
                         
-                        # Determine the appropriate scale (B or M) based on the maximum FCF value
-                        max_fcf = np.max(np.abs(fcf_data['FCF']))
-                        if max_fcf >= 1e9:
-                            scale = 1e9
-                            scale_label = 'B'
+                        # Filter out None values
+                        valid_years = []
+                        valid_fcf = []
+                        for year, fcf in zip(fcf_data['Year'], fcf_data['FCF']):
+                            if fcf is not None:
+                                valid_years.append(year)
+                                valid_fcf.append(fcf)
+                                
+                        if valid_fcf and any(fcf != 0 for fcf in valid_fcf):
+                            fcf_df = pd.DataFrame({
+                                'Year': valid_years,
+                                'FCF': valid_fcf
+                            })
+                            
+                            # Determine the appropriate scale (B or M) based on the maximum FCF value
+                            max_fcf = np.max(np.abs(fcf_df['FCF']))
+                            if max_fcf >= 1e9:
+                                scale = 1e9
+                                scale_label = 'B'
+                            else:
+                                scale = 1e6
+                                scale_label = 'M'
+                            
+                            # Scale the FCF values
+                            fcf_df['FCF_scaled'] = fcf_df['FCF'] / scale
+                            
+                            fig_fcf = go.Figure()
+                            fig_fcf.add_trace(go.Scatter(
+                                x=fcf_df['Year'], 
+                                y=fcf_df['FCF_scaled'], 
+                                mode='lines+markers',
+                                text=[f'${value:.2f}{scale_label}' for value in fcf_df['FCF_scaled']],
+                                hovertemplate='%{text}<extra></extra>'
+                            ))
+                            
+                            fig_fcf.update_layout(
+                                title="Free Cash Flow (FCF) Trend",
+                                xaxis_title="Year",
+                                yaxis_title=f"FCF (${scale_label})",
+                                height=300,
+                                width=400,
+                                margin=dict(l=0, r=0, t=40, b=0),
+                            )
+                            
+                            fig_fcf.update_yaxes(tickformat=".2f")
+                            
+                            st.plotly_chart(fig_fcf)
                         else:
-                            scale = 1e6
-                            scale_label = 'M'
-                        
-                        # Scale the FCF values
-                        fcf_data['FCF_scaled'] = fcf_data['FCF'] / scale
-                        
-                        fig_fcf = go.Figure()
-                        fig_fcf.add_trace(go.Scatter(
-                            x=fcf_data['Year'], 
-                            y=fcf_data['FCF_scaled'], 
-                            mode='lines+markers',
-                            text=[f'${value:.2f}{scale_label}' for value in fcf_data['FCF_scaled']],
-                            hovertemplate='%{text}<extra></extra>'
-                        ))
-                        
-                        fig_fcf.update_layout(
-                            title="Free Cash Flow (FCF) Trend",
-                            xaxis_title="Year",
-                            yaxis_title=f"FCF (${scale_label})",
-                            height=300,
-                            width=400,
-                            margin=dict(l=0, r=0, t=40, b=0),
-                        )
-                        
-                        fig_fcf.update_yaxes(tickformat=".2f")
-                        
-                        st.plotly_chart(fig_fcf)
+                            st.info("Free Cash Flow data not available for chart")
 
                     with col4:
-                        if not error_message and isinstance(fair_value, (int, float)):
+                        if not error_message and isinstance(fair_value, (int, float)) and fair_value > 0:
                             df = pd.DataFrame({
                                 'Type': ['Current Price', 'Fair Value'],
                                 'Price': [current_price, fair_value]
@@ -1022,16 +1005,17 @@ def main():
                             st.markdown(f"<p><b>Difference with Fair Value:</b> ${diff:.2f}</p>", unsafe_allow_html=True)
                             
                         else:
-                            st.markdown("<p>Negative FCF.</p>", unsafe_allow_html=True)
+                            st.info("Fair value calculation not available. This could be due to negative FCF or missing data.")
                             if error_message:
-                                st.markdown(f"<p><b>Error Details:</b> {error_message}</p>", unsafe_allow_html=True)
-                            st.markdown("<p>Please check the input data and ensure all required financial information is available.</p>", unsafe_allow_html=True)
+                                st.markdown(f"<p><b>Details:</b> {error_message}</p>", unsafe_allow_html=True)
 
                     # New section: Intermediate Data for the Calculation
                     st.markdown("<h4>Intermediate Data for the Calculation:</h4>", unsafe_allow_html=True)
 
                     # New function to format large numbers
                     def format_large_number(number):
+                        if number is None:
+                            return "N/A"
                         if abs(number) >= 1e9:
                             return f"${number/1e9:.2f}B"
                         elif abs(number) >= 1e6:
@@ -1050,34 +1034,37 @@ def main():
                         st.markdown(f"<p><b>Weight of Equity:</b> {weight_of_equity:.2%}</p>", unsafe_allow_html=True)
                     
                     with int_col2:
-                        st.markdown(f"<p><b>Latest FCF:</b> {format_large_number(financials['fcf_latest'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>FCF 1 year ago:</b> {format_large_number(financials['fcf_1years_ago'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>FCF 2 years ago:</b> {format_large_number(financials['fcf_2years_ago'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>FCF 3 years ago:</b> {format_large_number(financials['fcf_3years_ago'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Latest FCF:</b> {format_large_number(financials.get('fcf_latest'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>FCF 1 year ago:</b> {format_large_number(financials.get('fcf_1years_ago'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>FCF 2 years ago:</b> {format_large_number(financials.get('fcf_2years_ago'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>FCF 3 years ago:</b> {format_large_number(financials.get('fcf_3years_ago'))}</p>", unsafe_allow_html=True)
+                        if isinstance(fcf_growth_rate, (int, float)):
+                            st.markdown(f"<p><b>FCF Growth Rate:</b> {fcf_growth_rate:.2%}</p>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p><b>FCF Growth Rate:</b> N/A</p>", unsafe_allow_html=True)
                     
                     with int_col3:
-                        st.markdown(f"<p><b>Interest Expense:</b> {format_large_number(financials['interest_expense'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Tax Expense:</b> {format_large_number(financials['income_tax'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Pretax Income:</b> {format_large_number(financials['pre_tax_income'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Total Equity:</b> {format_large_number(financials['total_equity'])}</p>", unsafe_allow_html=True)
-                        st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials['total_debt'])}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Interest Expense:</b> {format_large_number(financials.get('interest_expense'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Tax Expense:</b> {format_large_number(financials.get('income_tax'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Pretax Income:</b> {format_large_number(financials.get('pre_tax_income'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Total Equity:</b> {format_large_number(financials.get('total_equity'))}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Total Debt:</b> {format_large_number(financials.get('total_debt'))}</p>", unsafe_allow_html=True)
                     
                     with int_col4:                    
-                        st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials['cash_and_cash_equivalents'])}</p>", unsafe_allow_html=True)                    
-                        st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials['share_issued'])}</p>", unsafe_allow_html=True)
+                        st.markdown(f"<p><b>Cash & Cash Equivalents:</b> {format_large_number(financials.get('cash_and_cash_equivalents'))}</p>", unsafe_allow_html=True)                    
+                        st.markdown(f"<p><b>Shares Outstanding:</b> {format_large_number(financials.get('share_issued'))}</p>", unsafe_allow_html=True)
 
                 except Exception as e:
                     st.error(f"Error calculating DCF valuation: {str(e)}")
+                    import traceback
                     st.write("Debug information:")
-                    st.write(f"Financials: {financials}")
+                    st.code(traceback.format_exc())
 
         except Exception as e:
             st.error(f"Error processing data: {str(e)}")
+            import traceback
             st.write("Debug information:")
-            st.write(f"Data shape: {st.session_state.data.shape}")
-            st.write(f"Data columns: {st.session_state.data.columns}")
-            st.write(f"Data head:\n{st.session_state.data.head()}")
+            st.code(traceback.format_exc())
     else:
         st.warning("No data available. Please check the ticker symbol and try again.")
 
